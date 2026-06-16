@@ -1,0 +1,20 @@
+{
+  "name": "currency-convert-cli",
+  "version": "1.0.0",
+  "description": "Node.js CLI client for the FastAPI currency conversion service (I4).",
+  "main": "src/convert.js",
+  "bin": {
+    "convert": "src/convert.js"
+  },
+  "scripts": {
+    "start": "node src/convert.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "axios": "^1.7.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "license": "MIT"
+}

@@ -1,0 +1,13 @@
+# Keep the build context tiny and the image clean.
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.git/
+.gitignore
+docs/
+README.md
+*.md
+.DS_Store
+tests/

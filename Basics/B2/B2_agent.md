@@ -180,3 +180,24 @@ Generate the complete API map and show:
 - **Rust/Go service**: inventory the `Router`/mux registration and handler functions.
 
 The detection tables let the agent auto-adapt to client-side vs server-side repos — no per-repo editing required.
+
+---
+
+## v2 Enhancements (folded in from repo-reader)
+
+**Discovery boost — codegraph.** If a `codegraph`/`user-codegraph` MCP is connected, prefer it for
+route→handler→service resolution and for `find_references` on each handler (cheaper + more accurate
+than grep). Fall back to Grep/Glob/Read otherwise — never halt.
+
+**Unused / orphaned routes (static analysis).** For each route, attempt a reference search on its
+handler. A handler/route with **zero inbound references** (no caller, not registered in the router
+root) is an **unused/orphaned candidate** — tag as *candidate*, cite the registration file (or its
+absence). This sharpens Phase 4 (deprecated/unused/hidden) with evidence rather than suspicion.
+
+**Confidence & verification matrix.** End the artifact with a small table: per section
+(Endpoints, Auth, Validation, Errors, Lifecycle) mark Verified vs Inferred — so a reader sees at a
+glance what was line-confirmed vs convention-inferred.
+
+**Client-repo reminder.** For Flutter/Android clients the "API surface" is **outbound** (Retrofit/
+Dio/`ApiManager` call sites) + **frontend/deep-link routes** — inventory those, and say explicitly
+"no server endpoints" rather than leaving the section empty.

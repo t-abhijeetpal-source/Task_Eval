@@ -151,3 +151,24 @@ Produce a **runnable testing guide** and show:
 - **Go**: `go test ./...`; `-run` to filter, `-race` and `-cover` flags.
 
 The detection tables let the agent auto-adapt — no per-repo editing required.
+
+---
+
+## v2 Enhancements (folded in from repo-reader)
+
+**CI command is canonical (reinforced).** The blessed test command is whatever CI runs
+(`.github/workflows/*`, `.gitlab-ci.yml`, `bitbucket-pipelines.yml`, `Makefile`). Cite the exact
+file:line and prefer it over any guessed command. Also capture the **coverage threshold/gate** from
+CI — and flag any *stale* threshold stated in docs that disagrees with CI (a common real defect).
+
+**Narrowest-safe-command-first (reinforced).** Run one file/module target to prove the toolchain
+before the full suite; for huge suites, run a representative subset, capture it, and give the
+full-suite command separately. Never claim a pass you didn't execute.
+
+**Self-validate example paths.** Every example test file path cited MUST exist — verify with a
+quick `ls`/glob before writing it. A non-existent example path is a hard defect (violates the
+cite-evidence rule). Prefer real, currently-present files.
+
+**Confidence split (reinforced).** Keep `### Agent Findings` (read from repo) strictly separate
+from `### Verified Findings` (executed, with real output). If a run is environment-blocked, state
+the blocker — do not fabricate counts.
