@@ -3,9 +3,10 @@
 A small command-line tool that reads a log file and counts how many lines are
 `INFO`, `WARN`, and `ERROR`. Built in Rust with `cargo`.
 
-> ✅ **Verification status:** built and verified with Rust 1.96.0 (installed via Homebrew).
+> ✅ **Verification status:** verified **2026-06-17** with Rust 1.96.0 (Homebrew).
 > `cargo test` → **7 passed**; `cargo run -- sample.log` → `INFO: 2 / WARN: 1 / ERROR: 1`;
-> missing file → exit code `1`.
+> missing file → exit `1`; no args → exit `2`.
+> Full run log: [`B6_verification.md`](B6_verification.md).
 
 ---
 

@@ -1,0 +1,14 @@
+[package]
+name = "logcount"
+version = "1.0.0"
+edition = "2021"
+description = "A small CLI that counts INFO/WARN/ERROR lines in a log file (B6 greenfield build)."
+license = "MIT"
+
+[[bin]]
+name = "logcount"
+path = "src/main.rs"
+
+[lib]
+name = "logcount"
+path = "src/lib.rs"
