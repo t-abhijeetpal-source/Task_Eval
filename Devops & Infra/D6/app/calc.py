@@ -1,0 +1,9 @@
+"""Pure functions exercised by the unit tests (reused from D3/D4)."""
+
+
+def add(a: int, b: int) -> int:
+    return a + b
+
+
+def is_even(n: int) -> bool:
+    return n % 2 == 0

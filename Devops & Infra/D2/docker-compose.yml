@@ -1,0 +1,47 @@
+name: d2-stack
+
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppass
+      POSTGRES_DB: appdb
+    # Auto-apply schema + fixtures on a fresh database so a clean `up` from zero
+    # needs no manual seeding (the file is idempotent; seed.sh remains for re-seeds).
+    volumes:
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/01-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - app-network
+
+  api:
+    build: ./api
+    environment:
+      DATABASE_URL: postgresql://appuser:apppass@database:5432/appdb
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "8080:8000"
+    networks:
+      - app-network
+
+  worker:
+    build: ./worker
+    environment:
+      DATABASE_URL: postgresql://appuser:apppass@database:5432/appdb
+      WORKER_ID: worker-1
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

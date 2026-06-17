@@ -1,0 +1,57 @@
+name: d6-observability
+
+services:
+  app:
+    build: .
+    container_name: d6-app
+    environment:
+      APP_ENV: docker
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=2).status==200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - obs
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: d6-prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - obs
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: d6-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      # Allow read-only anonymous viewing so dashboards can be opened/snapshotted
+      # without a login wall (local demo only — not for production).
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - obs
+
+networks:
+  obs:
+    driver: bridge

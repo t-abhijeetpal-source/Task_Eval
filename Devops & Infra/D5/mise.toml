@@ -1,0 +1,17 @@
+# D5 — pinned toolchain for a reproducible dev environment.
+# `mise install` reads this file and installs these exact versions, so every
+# clone (and CI, and a teammate's laptop) runs the same runtimes.
+[tools]
+python = "3.12.8"
+node = "22.12.0"
+
+[settings]
+# Python installs are verified via GitHub artifact attestations, which require
+# `gpg`. On a clean machine gpg is often absent — disable attestation so the
+# bootstrap does not silently depend on it. (Checksums are still verified.)
+python.github_attestations = false
+
+# Environment that was previously implicit — now declared and version-controlled.
+[env]
+APP_ENV = "dev"
+PYTHONDONTWRITEBYTECODE = "1"

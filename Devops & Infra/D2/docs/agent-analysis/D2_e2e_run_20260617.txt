@@ -1,0 +1,6 @@
+# D2 E2E Validation Record (2026-06-17T07:18:55Z)
+## docker compose ps
+NAME                  SERVICE    STATUS
+d2-stack-api-1        api        Up 31 seconds (healthy)
+d2-stack-database-1   database   Up 37 seconds (healthy)
+d2-stack-worker-1     worker     Up 31 seconds

@@ -1,0 +1,26 @@
+# Optional. Routes external HTTP to the ClusterIP Service.
+# Requires an ingress controller (e.g. ingress-nginx) in the cluster.
+# The primary network proof in the validation record uses `kubectl port-forward`,
+# which needs no controller; this manifest is included and dry-run validated.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: d4-sample
+  namespace: d4-sample
+  labels:
+    app.kubernetes.io/name: d4-sample
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: d4-sample.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: d4-sample
+                port:
+                  number: 80

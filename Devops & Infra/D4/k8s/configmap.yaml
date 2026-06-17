@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d4-config
+  namespace: d4-sample
+  labels:
+    app.kubernetes.io/name: d4-sample
+    app.kubernetes.io/component: config
+data:
+  # Injected into the container via `envFrom` in the Deployment.
+  # Surfaced over HTTP at GET / so injection is observable end-to-end.
+  APP_ENV: "kind-local"
+  APP_GREETING: "hello from D4 on Kubernetes"
+  APP_VERSION: "1.0.0"

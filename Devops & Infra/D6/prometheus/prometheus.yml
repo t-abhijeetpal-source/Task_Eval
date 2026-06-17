@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # The instrumented application — resolved via compose-network DNS (service "app").
+  - job_name: "d6-app"
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["app:8000"]
+        labels:
+          service: d6-sample
+
+  # Prometheus scraping itself (useful sanity target).
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]

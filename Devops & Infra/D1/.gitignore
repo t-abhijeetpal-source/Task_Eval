@@ -1,0 +1,8 @@
+# Terraform — ignore local state, provider plugins, plans, and the built zip.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+build/
+# Keep the lock file committed (pins provider versions): .terraform.lock.hcl

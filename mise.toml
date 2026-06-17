@@ -1,0 +1,26 @@
+# Reproducible runtime versions for the Task_Eval polyglot monorepo.
+# Single source of truth for the toolchain — `mise install` pins these exactly.
+# Evidence: python 3.12 in every Dockerfile (FROM python:3.12-slim); Node/jest in
+# package.json; Rust edition 2021 in Cargo.toml.
+
+[settings]
+# Corporate proxies interfere with GitHub attestation API; checksum verification
+# of the python standalone build still applies.
+python.github_attestations = false
+
+[tools]
+python = "3.12.7"
+node   = "22.11.0"
+rust   = "1.83.0"
+
+[env]
+# Loaded into the dev shell when mise is active. App-level overrides live in .env.
+PYTHONDONTWRITEBYTECODE = "1"
+
+[tasks.bootstrap]
+description = "Single-command onboarding (delegates to the Makefile)."
+run = "make bootstrap"
+
+[tasks.verify]
+description = "Run the full test suite."
+run = "make test"

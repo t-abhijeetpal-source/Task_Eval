@@ -1,0 +1,119 @@
+name: D3 CI
+
+# Stage 1 Lint -> Stage 2 Unit -> Stage 3 Integration -> Stage 4 Build -> Stage 5 Container -> Stage 6 Artifact
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+# Avoid wasted runs: cancel superseded runs on the same ref.
+concurrency:
+  group: d3-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: "Devops & Infra/D3"
+
+env:
+  PYTHON_VERSION: "3.12"
+  DEV_LOCK: "Devops & Infra/D3/requirements-dev.txt"
+
+jobs:
+  # ---- Stage 1: Lint (parallel with unit-tests) -------------------------------
+  lint:
+    name: Stage 1 - Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip                              # pip dependency cache
+          cache-dependency-path: ${{ env.DEV_LOCK }}
+      - run: pip install -r requirements-dev.txt  # deterministic: from the lockfile
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: echo "### ✅ Stage 1 Lint passed" >> "$GITHUB_STEP_SUMMARY"
+
+  # ---- Stage 2: Unit tests (parallel with lint) -------------------------------
+  unit-tests:
+    name: Stage 2 - Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: ${{ env.DEV_LOCK }}
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests/test_unit.py -v
+      - run: echo "### ✅ Stage 2 Unit tests passed" >> "$GITHUB_STEP_SUMMARY"
+
+  # ---- Stage 3: Integration tests (after unit) --------------------------------
+  integration-tests:
+    name: Stage 3 - Integration Tests
+    needs: [unit-tests]                            # fail fast: skipped if unit fails
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: ${{ env.DEV_LOCK }}
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest tests/test_integration.py -v
+      - run: echo "### ✅ Stage 3 Integration tests passed" >> "$GITHUB_STEP_SUMMARY"
+
+  # ---- Stage 4: Build + Stage 6: Artifact publication -------------------------
+  build:
+    name: Stage 4 - Build & Artifact
+    needs: [lint, integration-tests]               # gate: only build verified code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: ${{ env.DEV_LOCK }}
+      - run: pip install -r requirements-dev.txt
+      - name: Compile check
+        run: python -m compileall app
+      - name: Build metadata
+        run: |
+          cat > build-info.json <<EOF
+          {"commit": "${{ github.sha }}", "run": "${{ github.run_number }}", "ref": "${{ github.ref }}", "built_at": "$(date -u +%FT%TZ)"}
+          EOF
+          cat build-info.json
+      - name: Package build artifact
+        run: zip -r "d3-app-${{ github.run_number }}.zip" app requirements.txt build-info.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: d3-app-build
+          path: "Devops & Infra/D3/d3-app-${{ github.run_number }}.zip"
+          retention-days: 7
+      - run: echo "### ✅ Stage 4 Build + artifact published" >> "$GITHUB_STEP_SUMMARY"
+
+  # ---- Stage 5: Container image build -----------------------------------------
+  container:
+    name: Stage 5 - Container Image
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: "Devops & Infra/D3"
+          push: false
+          load: true
+          tags: |
+            d3-sample:${{ github.sha }}
+            d3-sample:latest
+          cache-from: type=gha                     # docker layer cache
+          cache-to: type=gha,mode=max
+      - run: echo "### ✅ Stage 5 Container image built (d3-sample:${{ github.sha }})" >> "$GITHUB_STEP_SUMMARY"
