@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowLeft, Share2, Star, GitBranch } from "lucide-react";
 import type { Agent } from "@/lib/data";
+import { agentEntry } from "@/lib/data";
 import { Badge, ScoreRing } from "@/components/ui/kit";
 import { DocViewer } from "@/components/doc-viewer";
 import { AgentCard } from "@/components/agent-card";
@@ -145,7 +146,7 @@ export function AgentDetail({ agent, related }: { agent: Agent; related: Agent[]
 
         {/* Right: document viewer (definition / demo output, preview / raw) */}
         <div>
-          <DocViewer agent={agent} />
+          <DocViewer agent={agent} entry={agentEntry(agent.code)} />
         </div>
       </div>
     </div>

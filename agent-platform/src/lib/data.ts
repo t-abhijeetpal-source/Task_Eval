@@ -1,3 +1,5 @@
+import realContent from "@/content/agents-content.json";
+
 export type Tier = "Basics" | "Intermediate" | "Advanced" | "Infrastructure";
 export type Difficulty = "Beginner" | "Intermediate" | "Advanced" | "Expert";
 export type Status = "Verified" | "Passed" | "In Progress" | "Planned";
@@ -342,15 +344,15 @@ Build a GitHub Actions pipeline: lint → unit → integration → build → con
 caching, lockfile installs, fail-fast, artifacts. Demonstrate a real failure (red) and a fix (green).`),
   },
   {
-    id: "d4", code: "D4", name: "Observability Stack", tier: "Infrastructure", category: "DevOps",
-    difficulty: "Advanced", status: "Verified", score: 95, tags: ["metrics", "logging", "tracing"],
-    summary: "Structured logging, Prometheus metrics and health/readiness probes with a live dashboard.",
-    description: "Instruments a service with structured JSON logs, a Prometheus /metrics endpoint, and health/readiness probes, wired to a local dashboard — verified end-to-end under load.",
-    inputs: [{ name: "servicePath", type: "string", required: true, note: "service to instrument" }],
-    outputs: ["instrumentation", "/metrics + /health + /ready", "dashboard", "D4_observability_record.md"],
-    flow: ["Structured logs", "Metrics", "Health/readiness", "Dashboard", "Verify under load"],
-    metrics: [{ label: "Signals", value: "logs + metrics + health" }, { label: "Probes", value: "/health /ready" }, { label: "Status", value: "verified" }],
-    evidence: "Structured logs + /metrics scrape + health/readiness verified under load.",
+    id: "d4", code: "D4", name: "Kubernetes Manifests & Validation", tier: "Infrastructure", category: "DevOps",
+    difficulty: "Advanced", status: "Verified", score: 95, tags: ["kubernetes", "k8s", "manifests"],
+    summary: "Production-grade Kubernetes manifests, validated on a local cluster.",
+    description: "Authors Kubernetes manifests (Deployment, Service, probes, resources) and verifies them on a local cluster — see the analysis + validation record.",
+    inputs: [{ name: "servicePath", type: "string", required: true, note: "service to deploy" }],
+    outputs: ["k8s manifests", "D4_kubernetes_analysis.md", "D4_kubernetes_validation_record.md"],
+    flow: ["Analyze service", "Author manifests", "Probes + resources", "Apply to local cluster", "Verify"],
+    metrics: [{ label: "Target", value: "Kubernetes" }, { label: "Validated", value: "local cluster" }, { label: "Status", value: "verified" }],
+    evidence: "Manifests verified on a local cluster (see D4_kubernetes_validation_record.md).",
     prompt: P(`# D4 — Observability
 Add structured JSON logging, metrics (/metrics), and health/readiness endpoints; wire a local
 dashboard. Prove signals flow under load.`),
@@ -370,15 +372,15 @@ Pin all runtimes (mise.toml + .tool-versions). One command (make bootstrap): ins
 deps from lockfiles → generate .env → build + test. Prove on a clean slate (make clean first).`),
   },
   {
-    id: "d6", code: "D6", name: "Release & Deploy", tier: "Infrastructure", category: "DevOps",
-    difficulty: "Expert", status: "Verified", score: 94, tags: ["release", "semver", "deploy"],
-    summary: "Versioned release pipeline with changelog, signed artifacts and a deploy gate.",
-    description: "Automates semantic versioning, changelog generation, artifact signing, and an environment-gated deploy with rollback — verified through a tagged release dry-run.",
-    inputs: [{ name: "repoPath", type: "string", required: true, note: "project to release" }],
-    outputs: ["release workflow", "CHANGELOG.md", "signed artifacts", "D6_release_record.md"],
-    flow: ["Version (semver)", "Changelog", "Tag + sign", "Deploy gate", "Rollback plan"],
-    metrics: [{ label: "Versioning", value: "semver" }, { label: "Deploy", value: "env-gated" }, { label: "Status", value: "verified" }],
-    evidence: "Tagged release dry-run: version bump + changelog + signed artifact + gated deploy.",
+    id: "d6", code: "D6", name: "Observability Bolt-On", tier: "Infrastructure", category: "DevOps",
+    difficulty: "Expert", status: "Verified", score: 94, tags: ["observability", "metrics", "logging"],
+    summary: "Structured logs + Prometheus metrics + health/readiness, bolted onto a service.",
+    description: "Adds an observability bolt-on (structured logging, Prometheus metrics, health/readiness probes) to a service and verifies the signals — see the service analysis + observability record.",
+    inputs: [{ name: "servicePath", type: "string", required: true, note: "service to instrument" }],
+    outputs: ["instrumentation", "D6_service_analysis.md", "D6_observability_record.md"],
+    flow: ["Analyze service", "Structured logs", "Metrics", "Health/readiness", "Verify signals"],
+    metrics: [{ label: "Signals", value: "logs + metrics + health" }, { label: "Backend", value: "Prometheus" }, { label: "Status", value: "verified" }],
+    evidence: "Signals verified (see D6_observability_record.md).",
     prompt: P(`# D6 — Release & Deploy
 Automate semantic versioning, changelog, signed artifacts, and an environment-gated deploy with rollback.`),
   },
@@ -511,4 +513,15 @@ export function agentDemoOutputMd(a: Agent): string {
     ...a.outputs.map((o) => `- \`${o}\``),
     "",
   ].join("\n");
+}
+
+// ---- Real ingested content (definitions + output reports from the task folders) ----
+export interface AgentDoc { file: string; label: string; content: string; lines: number; bytes: number; }
+export interface AgentEntry {
+  code: string; tier: string; title: string;
+  definitionFile: string | null; definition: string | null; documents: AgentDoc[];
+}
+export const AGENT_CONTENT = realContent as unknown as Record<string, AgentEntry>;
+export function agentEntry(code: string): AgentEntry | undefined {
+  return AGENT_CONTENT[code];
 }

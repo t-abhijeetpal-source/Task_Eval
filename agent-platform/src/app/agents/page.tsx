@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { Search, Download } from "lucide-react";
-import { AGENTS, TIERS, agentSlug, agentDefinitionMd } from "@/lib/data";
+import { AGENTS, TIERS, agentSlug, agentEntry } from "@/lib/data";
 import { Badge } from "@/components/ui/kit";
 import { DocViewer } from "@/components/doc-viewer";
 import { cn } from "@/lib/utils";
@@ -25,7 +25,11 @@ export default function AgentsPage() {
   const current = AGENTS.find((a) => a.id === currentId) ?? AGENTS[0];
 
   const exportAll = () => {
-    const md = AGENTS.map((a) => `# ${a.code} · ${a.name}\n\n${agentDefinitionMd(a)}\n\n---\n`).join("\n");
+    const md = AGENTS.map((a) => {
+      const e = agentEntry(a.code);
+      const body = e?.definition ?? e?.documents[0]?.content ?? a.summary;
+      return `# ${a.code} · ${a.name}\n\n${body}\n\n---\n`;
+    }).join("\n");
     const blob = new Blob([md], { type: "text/markdown" });
     const url = URL.createObjectURL(blob);
     const el = document.createElement("a");
@@ -102,7 +106,7 @@ export default function AgentsPage() {
           <div className="mt-1 font-mono text-[11px] text-[var(--muted)]">repo-{agentSlug(current)}</div>
         </div>
 
-        <DocViewer agent={current} />
+        <DocViewer agent={current} entry={agentEntry(current.code)} />
       </motion.section>
     </div>
   );
