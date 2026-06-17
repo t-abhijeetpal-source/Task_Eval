@@ -103,3 +103,48 @@ def test_score_unknown_404(client):
     }
     resp = client.post("/internal/transactions/nope/score", json=score_payload)
     assert resp.status_code == 404
+
+
+# --- A5 hardening regression tests (path traversal, idempotency, internal auth) ---
+
+def test_path_traversal_transaction_id_rejected(client, queue_dir):
+    """A5-1: a traversal id must be rejected (422), not written outside queue/."""
+    txn = _valid_txn()
+    txn["transaction_id"] = "../A5_PWNED"
+    resp = client.post("/transactions", json=txn)
+    assert resp.status_code == 422
+    # nothing escaped the queue dir
+    parent = os.path.dirname(os.path.abspath(queue_dir))
+    assert not os.path.exists(os.path.join(parent, "A5_PWNED.json"))
+
+
+def test_duplicate_transaction_id_returns_409(client):
+    """A5-3: a duplicate id is idempotent-safe (409), never a 500."""
+    txn = _valid_txn()
+    first = client.post("/transactions", json=txn)
+    assert first.status_code == 201
+    second = client.post("/transactions", json=txn)
+    assert second.status_code == 409
+
+
+def test_internal_score_requires_token_when_configured(client, monkeypatch):
+    """A5-2: when A3_INTERNAL_TOKEN is set, /internal requires the matching header."""
+    from app import routes
+    monkeypatch.setattr(routes, "_INTERNAL_TOKEN", "s3cret")
+    client.post("/transactions", json=_valid_txn())
+    score = {
+        "schema_version": "1.0",
+        "transaction_id": "txn_001",
+        "score": 0,
+        "risk_level": "low",
+        "reasons": [],
+    }
+    # no token -> 401
+    assert client.post("/internal/transactions/txn_001/score", json=score).status_code == 401
+    # correct token -> 200
+    ok = client.post(
+        "/internal/transactions/txn_001/score",
+        json=score,
+        headers={"X-Internal-Token": "s3cret"},
+    )
+    assert ok.status_code == 200

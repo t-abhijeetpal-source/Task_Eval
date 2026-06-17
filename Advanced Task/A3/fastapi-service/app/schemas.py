@@ -1,16 +1,17 @@
 from typing import List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class TransactionIn(BaseModel):
     schema_version: str = "1.0"
-    transaction_id: str
-    user_id: str
+    # Strict id: prevents path traversal in the queue filename (A5-1) and bounds storage.
+    transaction_id: str = Field(..., pattern=r"^[A-Za-z0-9_-]{1,64}$")
+    user_id: str = Field(..., min_length=1, max_length=128)
     amount: float
-    country: str
-    merchant_category: str
-    timestamp: str
+    country: str = Field(..., min_length=2, max_length=8)
+    merchant_category: str = Field(..., min_length=1, max_length=64)
+    timestamp: str = Field(..., max_length=64)
 
 
 class ScoreResult(BaseModel):

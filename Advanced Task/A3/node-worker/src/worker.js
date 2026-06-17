@@ -26,6 +26,7 @@ const config = {
   QUEUE_DIR: process.env.QUEUE_DIR || './queue',
   ENGINE_BIN:
     process.env.ENGINE_BIN || '../rust-engine/target/release/fraud-engine',
+  INTERNAL_TOKEN: process.env.A3_INTERNAL_TOKEN || null,
   MAX_ATTEMPTS: 3,
   BACKOFF_MS: 100,
   POLL_INTERVAL_MS: 2000,
@@ -175,9 +176,12 @@ function postScore(scoreResult, deps = {}) {
 
   const id = scoreResult.transaction_id;
   const url = `${apiUrl}/internal/transactions/${id}/score`;
-  return http.post(url, scoreResult, {
-    headers: { 'Content-Type': 'application/json' },
-  });
+  const headers = { 'Content-Type': 'application/json' };
+  const token = deps.internalToken != null ? deps.internalToken : config.INTERNAL_TOKEN;
+  if (token) {
+    headers['X-Internal-Token'] = token;
+  }
+  return http.post(url, scoreResult, { headers });
 }
 
 // ---------------------------------------------------------------------------

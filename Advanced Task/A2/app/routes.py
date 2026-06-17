@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -42,9 +43,18 @@ def list_expenses(db: Session = Depends(get_db)):
 
 @router.get("/summary", response_model=Summary)
 def summary(db: Session = Depends(get_db)):
-    expenses = db.query(Expense).all()
-    total = sum(e.amount for e in expenses)
-    by_category: dict = {}
-    for e in expenses:
-        by_category[e.category] = by_category.get(e.category, 0) + e.amount
-    return Summary(total=total, count=len(expenses), by_category=by_category)
+    # Aggregate in SQL (GROUP BY) instead of materializing every row as an ORM
+    # object and summing in Python — the DB returns one row per category.
+    rows = (
+        db.query(
+            Expense.category,
+            func.sum(Expense.amount),
+            func.count(Expense.id),
+        )
+        .group_by(Expense.category)
+        .all()
+    )
+    by_category = {cat: float(cat_total) for cat, cat_total, _ in rows}
+    total = float(sum(by_category.values()))
+    count = sum(cat_count for _, _, cat_count in rows)
+    return Summary(total=total, count=count, by_category=by_category)

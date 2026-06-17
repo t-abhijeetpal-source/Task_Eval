@@ -1,6 +1,7 @@
+import os
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -10,6 +11,10 @@ from .models import Transaction
 from .schemas import ScoreResult, TransactionIn
 
 router = APIRouter()
+
+# Optional shared-secret for the internal scoring callback (A5-2). When
+# A3_INTERNAL_TOKEN is set, callers MUST send a matching X-Internal-Token header.
+_INTERNAL_TOKEN = os.environ.get("A3_INTERNAL_TOKEN")
 
 
 def _txn_to_dict(txn: Transaction) -> dict:
@@ -39,6 +44,13 @@ def create_transaction(
         )
 
     request_id = getattr(request.state, "request_id", None)
+
+    # Idempotency: a duplicate transaction_id must not crash with a 500 (A5-3).
+    if db.get(Transaction, payload.transaction_id) is not None:
+        return JSONResponse(
+            status_code=409,
+            content={"error": "transaction_id already exists", "transaction_id": payload.transaction_id},
+        )
 
     txn = Transaction(
         transaction_id=payload.transaction_id,
@@ -94,8 +106,15 @@ def get_transaction(transaction_id: str, db: Session = Depends(get_db)):
 
 @router.post("/internal/transactions/{transaction_id}/score")
 def score_transaction(
-    transaction_id: str, payload: ScoreResult, db: Session = Depends(get_db)
+    transaction_id: str,
+    payload: ScoreResult,
+    db: Session = Depends(get_db),
+    x_internal_token: str | None = Header(default=None),
 ):
+    # Auth-gate the internal callback when a token is configured (A5-2).
+    if _INTERNAL_TOKEN is not None and x_internal_token != _INTERNAL_TOKEN:
+        return JSONResponse(status_code=401, content={"error": "unauthorized"})
+
     txn = db.get(Transaction, transaction_id)
     if txn is None:
         return JSONResponse(status_code=404, content={"error": "not found"})
