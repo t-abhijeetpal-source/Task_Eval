@@ -1,4 +1,4 @@
-# Task_Eval — Coding-Agent Capability Portfolio
+# Task_Evaluation — Coding-Agent Capability Portfolio
 
 A graded, end-to-end portfolio demonstrating what a coding agent can do across the full software
 lifecycle — **understand, build, verify, harden, optimize, and operate** real systems in
