@@ -67,6 +67,11 @@ export function parseTestFooters(text) {
     const cargo = line.match(/^test result:\s*ok\.\s*(\d+) passed/);
     if (cargo) { breakdown.cargo += Number(cargo[1]); continue; }
 
+    // Skip footers from non-green runs (e.g. the reproduction step "3 failed, 2 passed");
+    // we count passing test-case executions from green runs only. (cargo's own
+    // "0 failed" tail is handled above and never reaches here.)
+    if (/\d+ failed/.test(line)) continue;
+
     // jest: "Tests:       14 passed, 14 total"
     if (/^Tests:/.test(line)) {
       const m = line.match(/(\d+) passed/);

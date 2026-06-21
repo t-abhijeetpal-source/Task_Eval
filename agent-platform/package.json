@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "ingest": "node scripts/ingest.mjs",
+    "build:metrics": "node scripts/build-metrics.mjs",
+    "test": "node --test \"tests/**/*.test.mjs\"",
     "test:ingest": "node scripts/test-i3-content.mjs"
   },
   "dependencies": {

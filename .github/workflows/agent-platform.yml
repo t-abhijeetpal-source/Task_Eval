@@ -1,0 +1,82 @@
+name: Agent Platform
+
+# CI for the Next.js showcase (agent-platform/). Runs at the REPO ROOT because GitHub only
+# executes workflows under the repository-root .github/workflows. Mirrors the local flow:
+#   build:metrics -> regenerate metrics.json from real repo data (catalog + VERIFICATION logs + git)
+#   test          -> node:test (parser units, metrics schema + drift, no-local-paths, route guards)
+#   lint          -> eslint
+#   build         -> next build (production)
+# Path-filtered so it only runs when the app or this workflow changes.
+on:
+  push:
+    paths:
+      - "agent-platform/**"
+      - ".github/workflows/agent-platform.yml"
+  pull_request:
+    paths:
+      - "agent-platform/**"
+      - ".github/workflows/agent-platform.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: agent-platform-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: build + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so build:metrics can derive the real activity feed
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: agent-platform/package-lock.json
+
+      - name: Install dependencies
+        working-directory: agent-platform
+        run: npm ci
+
+      - name: Generate metrics from the repository
+        working-directory: agent-platform
+        run: npm run build:metrics
+
+      - name: Ingest task content (keeps committed JSON if folders absent)
+        working-directory: agent-platform
+        run: npm run ingest
+
+      - name: Tests (node:test)
+        working-directory: agent-platform
+        run: npm test
+
+      - name: Lint
+        working-directory: agent-platform
+        run: npm run lint
+
+      - name: No machine-specific paths in the shipped source
+        working-directory: agent-platform
+        run: |
+          if grep -rEn '/Users/[a-z][A-Za-z0-9._-]*/' src --include='*.ts' --include='*.tsx' --include='*.css' --include='*.json'; then
+            echo "::error::Absolute home path leaked into the bundle"; exit 1
+          fi
+          echo "OK — no leaked home paths"
+
+      - name: Production build
+        working-directory: agent-platform
+        run: npm run build
+
+      - name: Summary
+        if: success()
+        run: |
+          {
+            echo "### ✅ agent-platform — built & verified"
+            echo "- metrics regenerated from real repo data (catalog + VERIFICATION logs + git)"
+            echo "- node:test suite: passed"
+            echo "- eslint: passed"
+            echo "- no leaked machine paths"
+            echo "- next build: passed"
+          } >> "$GITHUB_STEP_SUMMARY"

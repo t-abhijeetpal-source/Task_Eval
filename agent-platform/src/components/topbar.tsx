@@ -7,7 +7,10 @@ import { useEffect, useState } from "react";
 export function Topbar() {
   const { setCmdk } = useUI();
   const { theme, setTheme } = useTheme();
+  // Standard next-themes hydration guard: the resolved theme is unknown on the server, so we
+  // render a theme-agnostic icon until mounted on the client to avoid a hydration mismatch.
   const [mounted, setMounted] = useState(false);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional one-shot mount flag
   useEffect(() => setMounted(true), []);
 
   return (

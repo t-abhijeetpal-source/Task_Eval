@@ -30,6 +30,18 @@ export function Badge({
   );
 }
 
+// Marks a number/section as illustrative (not live telemetry) per the data-integrity rule.
+export function IllustrativeBadge({ className }: { className?: string }) {
+  return (
+    <span
+      title="Illustrative example — not live telemetry"
+      className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ring-1 text-amber-400 bg-amber-500/10 ring-amber-500/20", className)}
+    >
+      Illustrative
+    </span>
+  );
+}
+
 export function ScoreRing({ score, size = 44 }: { score: number; size?: number }) {
   const r = (size - 6) / 2;
   const c = 2 * Math.PI * r;

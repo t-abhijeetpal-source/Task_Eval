@@ -1,15 +1,21 @@
 {
-  "generatedAt": "2026-06-21T18:41:54.281Z",
+  "generatedAt": "2026-06-21T19:02:27.794Z",
   "source": "scripts/build-metrics.mjs",
   "metrics": {
     "totalAgents": 24,
     "completed": 24,
     "successRate": 100,
-    "executions": 161,
+    "executions": 156,
     "projects": 6,
     "avgScore": 97
   },
   "activity": [
+    {
+      "agent": "repo",
+      "text": "Add repo-modernization deliverables + agent-platform metrics; ignore coverage artifacts",
+      "iso": "2026-06-22T00:12:47+05:30",
+      "kind": "pass"
+    },
     {
       "agent": "A3",
       "text": "Harden A3 polyglot-fraud-system to production grade (68->96).",
@@ -39,12 +45,6 @@
       "text": "Harden A2 parallel-expense-tracker to production grade (money cents, deep health, CI smoke).",
       "iso": "2026-06-21T17:26:23+05:30",
       "kind": "pass"
-    },
-    {
-      "agent": "I5",
-      "text": "Harden I5 dockerize-service to production grade (tests, CI, Decimal, security, observability, probes)",
-      "iso": "2026-06-21T14:22:28+05:30",
-      "kind": "security"
     }
   ],
   "trend": [

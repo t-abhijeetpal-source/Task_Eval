@@ -6,6 +6,7 @@ import {
   LayoutDashboard, Boxes, FolderGit2, BookOpen, FileText, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { METRICS } from "@/lib/data";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -51,7 +52,7 @@ export function Sidebar() {
 
       <div className="mt-auto card p-3 text-xs text-[var(--muted)]">
         <div className="flex items-center gap-2 font-medium text-[var(--fg)]"><span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" /> All systems green</div>
-        <p className="mt-1">24 agents · 85 tests passing</p>
+        <p className="mt-1">{METRICS.totalAgents} agents · {METRICS.executions} test executions</p>
       </div>
     </aside>
   );

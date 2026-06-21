@@ -1,6 +1,6 @@
 "use client";
 import {
-  Area, AreaChart, Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell,
+  Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid, Cell, Legend,
 } from "recharts";
 import { TREND, CATEGORY_PERF } from "@/lib/data";
 
@@ -12,27 +12,21 @@ const tip = {
   labelStyle: { color: "var(--muted)" },
 };
 
+// Verification coverage per tier — total agents vs. agents with verified evidence.
+// Both series are computed from the catalog (see scripts/build-metrics.mjs); nothing here
+// is synthesized.
 export function TrendChart() {
   return (
     <ResponsiveContainer width="100%" height={240}>
-      <AreaChart data={TREND} margin={{ left: -20, right: 8, top: 8 }}>
-        <defs>
-          <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.5} />
-            <stop offset="100%" stopColor="var(--accent)" stopOpacity={0} />
-          </linearGradient>
-          <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--accent-3)" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="var(--accent-3)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
+      <BarChart data={TREND} margin={{ left: -20, right: 8, top: 8 }} barGap={2}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-        <XAxis dataKey="month" stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} />
-        <YAxis stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} />
-        <Tooltip {...tip} />
-        <Area type="monotone" dataKey="evaluations" stroke="var(--accent)" strokeWidth={2} fill="url(#g1)" />
-        <Area type="monotone" dataKey="success" stroke="var(--accent-3)" strokeWidth={2} fill="url(#g2)" />
-      </AreaChart>
+        <XAxis dataKey="tier" stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} />
+        <YAxis stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+        <Tooltip {...tip} cursor={{ fill: "var(--fg)", opacity: 0.04 }} />
+        <Legend wrapperStyle={{ fontSize: 11, color: "var(--muted)" }} />
+        <Bar dataKey="total" name="Agents" radius={[6, 6, 0, 0]} fill="var(--border)" />
+        <Bar dataKey="verified" name="Verified" radius={[6, 6, 0, 0]} fill="var(--accent)" />
+      </BarChart>
     </ResponsiveContainer>
   );
 }

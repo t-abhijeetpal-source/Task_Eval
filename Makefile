@@ -39,7 +39,10 @@ A6_DIR := "Advanced/performance-optimization"
 # A3 polyglot fraud system (FastAPI + Node worker + Rust engine; file-queue + HTTP callback).
 A3_DIR := Advanced/polyglot-fraud-system
 
-.PHONY: help bootstrap doctor setup-env verify test rust node python i1-verify i3-verify i3-flutter-verify i4-verify a1-validate a2-verify a2-docker-smoke a3-integration a3-verify a6-verify clean
+# Basics tier — shared contract + analysis artifact gates.
+BASICS_DIR := Basics
+
+.PHONY: help bootstrap doctor setup-env verify test rust node python i1-verify i3-verify i3-flutter-verify i4-verify a1-validate a2-verify a2-docker-smoke a3-integration a3-verify a6-verify agent-platform basics-verify b1-verify b2-verify b3-verify basics-build-test b6-bench clean
 
 help:  ## Show available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) \
@@ -184,6 +187,42 @@ a3-verify:  ## Verify A3 (Rust + pytest + Node + contract conformance + e2e inte
 	@echo "-- Deliverable validation gate (structure + doc consistency) --"
 	@( cd $(A3_DIR) && bash scripts/validate_a3_deliverable.sh )
 	@echo "== ✅ A3 VERIFY PASSED =="
+
+# ---- agent-platform — Next.js showcase (data integrity + build) ----------------
+agent-platform:  ## Verify the Next.js agent-platform (regenerate metrics -> test -> lint -> build)
+	@echo "== agent-platform: install + verify =="
+	@( cd agent-platform \
+		&& npm ci \
+		&& echo "-- regenerate metrics.json from real repo data --" && npm run build:metrics \
+		&& echo "-- node:test suite --" && npm test \
+		&& echo "-- eslint --" && npm run lint \
+		&& echo "-- next build --" && npm run build ) || exit 1
+	@echo "== ✅ AGENT-PLATFORM PASSED =="
+
+# ---- Basics — B1–B6 shared contract + artifact gates + service tests -----------
+basics-verify: b1-verify b2-verify b3-verify basics-build-test b6-bench  ## Verify Basics tier (B1–B6 artifacts + B4/B5 contract + B6)
+
+b1-verify:  ## Validate B1 inventory artifact (offline section + count checks)
+	@bash "$(BASICS_DIR)/scripts/validate_b1_inventory.sh"
+
+b2-verify:  ## Validate B2 route map (offline YAML; live diff when REPO_ROOT is set)
+	@bash "$(BASICS_DIR)/scripts/b2-verify.sh"
+
+b3-verify:  ## Validate B3 test-discovery staleness anchors
+	@bash "$(BASICS_DIR)/scripts/check_b3_staleness.sh"
+
+basics-build-test:  ## Run B4 (pytest) + B5 (jest) + B6 (cargo) including shared contract tests
+	@echo "== basics: rust-logcount-cli =="
+	@( cd $(BASICS_DIR)/rust-logcount-cli && $(RUN) cargo test ) || exit 1
+	@echo "== basics: node-transaction-service =="
+	@( cd $(BASICS_DIR)/node-transaction-service && $(RUN) npm install --silent && $(RUN) npm test ) || exit 1
+	@echo "== basics: fastapi-transaction-service =="
+	@( cd $(BASICS_DIR)/fastapi-transaction-service && $(RUN) python -m venv .venv && . .venv/bin/activate \
+		&& pip -q install -r requirements.txt && python -m pytest -q ) || exit 1
+	@echo "== ✅ BASICS VERIFY PASSED =="
+
+b6-bench:  ## Stream-benchmark B6 logcount on a 50k-line temp file
+	@bash "$(BASICS_DIR)/scripts/bench_logcount.sh"
 
 clean:  ## Remove generated venvs / node_modules / build artifacts
 	@find . -type d \( -name .venv -o -name node_modules -o -name target \

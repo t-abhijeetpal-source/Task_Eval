@@ -3,12 +3,25 @@
 // Guards: if the task folders aren't present (e.g. on Vercel where only agent-platform
 // is uploaded), it KEEPS the existing JSON instead of overwriting with empty data.
 import { promises as fs } from "fs";
+import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../.."); // Tasks/
 const OUT = path.resolve(__dirname, "../src/content/agents-content.json");
+
+// Redact machine-specific absolute paths so they never reach the shipped bundle.
+// The home directory prefix (e.g. /Users/<name> or /home/<name>) becomes `~`; this
+// leaves legitimate in-code package segments (a `home` directory inside source trees)
+// untouched because they don't live under the real home directory.
+const HOME = os.homedir();
+function sanitize(text) {
+  if (!text || !HOME) return text;
+  // Replace the real home-directory prefix with `~`. This is precise: a `home` package
+  // segment inside a source tree doesn't live under the real home directory, so it stays.
+  return text.split(HOME).join("~");
+}
 
 const TIERS = [
   ["Basics", "Basics"],
@@ -71,7 +84,7 @@ for (const [folder, tier] of TIERS) {
 
     let definition = null, definitionFile = null;
     try {
-      definition = await fs.readFile(path.join(adir, `${code}_agent.md`), "utf8");
+      definition = sanitize(await fs.readFile(path.join(adir, `${code}_agent.md`), "utf8"));
       definitionFile = `${code}_agent.md`;
     } catch {}
 
@@ -81,7 +94,7 @@ for (const [folder, tier] of TIERS) {
     for (const f of files) {
       const rel = path.relative(adir, f).split(path.sep).join("/");
       if (rel === definitionFile) continue;
-      const c = await fs.readFile(f, "utf8");
+      const c = sanitize(await fs.readFile(f, "utf8"));
       documents.push({ file: rel, label: path.basename(f), content: c, lines: c.split("\n").length, bytes: Buffer.byteLength(c) });
     }
     documents.sort((a, b) => rank(a.file) - rank(b.file) || a.file.localeCompare(b.file));

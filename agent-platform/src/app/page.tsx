@@ -3,14 +3,15 @@ import { ArrowUpRight, Boxes, CheckCircle2, Gauge, Activity, FolderGit2, Star } 
 import { Counter } from "@/components/counter";
 import { TrendChart, CategoryChart } from "@/components/charts";
 import { AgentCard } from "@/components/agent-card";
-import { Card } from "@/components/ui/kit";
-import { AGENTS, METRICS, ACTIVITY } from "@/lib/data";
+import { RelativeTime } from "@/components/relative-time";
+import { Card, IllustrativeBadge } from "@/components/ui/kit";
+import { AGENTS, METRICS, ACTIVITY, METRICS_GENERATED_AT, METRICS_ILLUSTRATIVE } from "@/lib/data";
 
 const stats = [
   { label: "Total Agents", value: METRICS.totalAgents, icon: Boxes, accent: "from-indigo-500/20 to-violet-500/10" },
   { label: "Completed", value: METRICS.completed, icon: CheckCircle2, accent: "from-emerald-500/20 to-teal-500/10" },
   { label: "Success Rate", value: METRICS.successRate, suffix: "%", icon: Gauge, accent: "from-cyan-500/20 to-sky-500/10" },
-  { label: "Executions", value: METRICS.executions, icon: Activity, accent: "from-fuchsia-500/20 to-pink-500/10" },
+  { label: "Test executions", value: METRICS.executions, icon: Activity, accent: "from-fuchsia-500/20 to-pink-500/10" },
   { label: "Projects", value: METRICS.projects, icon: FolderGit2, accent: "from-amber-500/20 to-orange-500/10" },
   { label: "Avg Score", value: METRICS.avgScore, icon: Star, accent: "from-violet-500/20 to-indigo-500/10" },
 ];
@@ -26,7 +27,7 @@ export default function Dashboard() {
       <section className="card gradient-border relative overflow-hidden p-8">
         <div className="relative z-10 max-w-2xl">
           <span className="inline-flex items-center gap-2 rounded-full glass px-3 py-1 text-xs text-[var(--muted)]">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> 24 agents · 85 tests passing
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" /> {METRICS.totalAgents} agents · {METRICS.executions} verified test executions
           </span>
           <h1 className="mt-4 text-3xl sm:text-4xl font-semibold tracking-tight">
             The <span className="gradient-text">AI Agent</span> Marketplace<br /> &amp; Evaluation Platform
@@ -65,27 +66,30 @@ export default function Dashboard() {
       <section className="grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-3">
           <div className="mb-2 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Evaluation Progress</h2>
-            <span className="text-xs text-[var(--muted)]">last 6 months</span>
+            <h2 className="text-sm font-semibold">Verification by tier</h2>
+            <span className="text-xs text-[var(--muted)]">agents vs. verified</span>
           </div>
           <TrendChart />
         </Card>
         <Card className="lg:col-span-2">
-          <h2 className="mb-2 text-sm font-semibold">Performance by Category</h2>
+          <h2 className="mb-2 text-sm font-semibold">Average score by category</h2>
           <CategoryChart />
         </Card>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-5">
         <Card className="lg:col-span-2">
-          <h2 className="mb-4 text-sm font-semibold">Recent Activity</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Recent activity</h2>
+            {METRICS_ILLUSTRATIVE.activity && <IllustrativeBadge />}
+          </div>
           <ul className="space-y-4">
             {ACTIVITY.map((a, i) => (
               <li key={i} className="flex gap-3">
-                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${kindColor[a.kind]}`} />
+                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${kindColor[a.kind] ?? "bg-[var(--muted)]"}`} />
                 <div className="min-w-0">
                   <p className="text-sm leading-snug"><span className="font-mono text-[var(--accent)]">{a.agent}</span> {a.text}</p>
-                  <span className="text-[11px] text-[var(--muted)]">{a.time}</span>
+                  <span className="text-[11px] text-[var(--muted)]"><RelativeTime iso={a.iso} /></span>
                 </div>
               </li>
             ))}
@@ -101,6 +105,12 @@ export default function Dashboard() {
           </div>
         </div>
       </section>
+
+      <p className="text-[11px] text-[var(--muted)]">
+        Metrics computed from the repository (agent catalog, <code>VERIFICATION_RESULTS.md</code> test
+        footers and git history) by <code>scripts/build-metrics.mjs</code> · generated{" "}
+        <RelativeTime iso={METRICS_GENERATED_AT} />.
+      </p>
     </div>
   );
 }
