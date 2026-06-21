@@ -42,6 +42,20 @@ description: >-
 
 ---
 
+## Optional lanes 7–8 (extended analysis)
+
+After the 6 core lanes + verification, two **optional** lanes deepen the audit. They are
+coordinator-derived from the verified core reports (read-only) and clearly mark INFERRED/UNVERIFIED
+claims that need a live recapture:
+
+| # | Agent | Mission | Deliverable |
+|---|---|---|---|
+| 7 | **Security** | Mobile-client threat model: token handling, outbound-`@Url` integrity, local-cache exposure, CI security-gap | `A1_security.md` (≥5 findings) |
+| 8 | **Performance** | Async-stack overhead, DB write/index hot-paths, build/scale, API surface cost | `A1_performance.md` (≥5 findings) |
+
+A dependency/version inventory (`A1_dependencies.md`) consolidates the stack + test-lib versions from
+the architecture and tests lanes. These optional lanes are not required for a baseline run.
+
 ## Required report files (Phase 2)
 
 ```text

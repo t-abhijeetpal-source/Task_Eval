@@ -16,6 +16,13 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Test coverage artifacts (generated; not source)
+.coverage
+.coverage.*
+coverage/
+htmlcov/
+*.lcov
+
 # OS / editor
 .DS_Store
 *.swp

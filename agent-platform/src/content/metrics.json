@@ -1,0 +1,110 @@
+{
+  "generatedAt": "2026-06-21T18:41:54.281Z",
+  "source": "scripts/build-metrics.mjs",
+  "metrics": {
+    "totalAgents": 24,
+    "completed": 24,
+    "successRate": 100,
+    "executions": 161,
+    "projects": 6,
+    "avgScore": 97
+  },
+  "activity": [
+    {
+      "agent": "A3",
+      "text": "Harden A3 polyglot-fraud-system to production grade (68->96).",
+      "iso": "2026-06-22T00:06:45+05:30",
+      "kind": "pass"
+    },
+    {
+      "agent": "B4",
+      "text": "Harden Basics tasks to production grade (B4/B5/B6 services, B1-B3 docs, interview materials).",
+      "iso": "2026-06-21T17:36:41+05:30",
+      "kind": "pass"
+    },
+    {
+      "agent": "A1",
+      "text": "Harden A1 parallel-repo-analysis to production grade (multi-agent reports + validation gate).",
+      "iso": "2026-06-21T17:32:27+05:30",
+      "kind": "verify"
+    },
+    {
+      "agent": "A6",
+      "text": "Harden A6 performance-optimization to production grade (61->96, reproducible on 3.12.7).",
+      "iso": "2026-06-21T17:31:06+05:30",
+      "kind": "perf"
+    },
+    {
+      "agent": "A2",
+      "text": "Harden A2 parallel-expense-tracker to production grade (money cents, deep health, CI smoke).",
+      "iso": "2026-06-21T17:26:23+05:30",
+      "kind": "pass"
+    },
+    {
+      "agent": "I5",
+      "text": "Harden I5 dockerize-service to production grade (tests, CI, Decimal, security, observability, probes)",
+      "iso": "2026-06-21T14:22:28+05:30",
+      "kind": "security"
+    }
+  ],
+  "trend": [
+    {
+      "tier": "Basics",
+      "total": 6,
+      "verified": 6
+    },
+    {
+      "tier": "Intermediate",
+      "total": 6,
+      "verified": 6
+    },
+    {
+      "tier": "Advanced",
+      "total": 6,
+      "verified": 6
+    },
+    {
+      "tier": "Infrastructure",
+      "total": 6,
+      "verified": 6
+    }
+  ],
+  "categoryPerf": [
+    {
+      "category": "Architecture",
+      "score": 96
+    },
+    {
+      "category": "Testing",
+      "score": 96
+    },
+    {
+      "category": "Automation",
+      "score": 99
+    },
+    {
+      "category": "DevOps",
+      "score": 96
+    },
+    {
+      "category": "Research",
+      "score": 97
+    },
+    {
+      "category": "Security",
+      "score": 97
+    },
+    {
+      "category": "Performance",
+      "score": 98
+    },
+    {
+      "category": "Infrastructure",
+      "score": 96
+    }
+  ],
+  "isIllustrative": {
+    "activity": false,
+    "trend": false
+  }
+}

@@ -1,0 +1,22 @@
+# Build context for the I5 image is this `Intermediate/` directory, but the image
+# only needs the dockerize-service entry point + the shared currency-core package.
+# Ignore everything by default, then re-include just those two trees and strip cruft.
+
+*
+
+!dockerize-service
+!shared
+
+# Strip heavy / irrelevant files from the re-included trees.
+**/.venv
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/.pytest_cache
+**/.git
+**/.gitignore
+**/node_modules
+**/tests
+**/.DS_Store
+# NOTE: README.md files are intentionally kept — currency-core's pyproject.toml
+# declares `readme = "README.md"`, so setuptools needs it during pip install.
