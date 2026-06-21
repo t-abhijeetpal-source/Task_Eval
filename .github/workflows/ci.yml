@@ -1,10 +1,23 @@
 name: D3 CI
 
-# Stage 1 Lint -> Stage 2 Unit -> Stage 3 Integration -> Stage 4 Build -> Stage 5 Container -> Stage 6 Artifact
+# Fail-fast ordering:
+#   Stage 1 Lint  ─┐
+#   Stage 2 Unit  ─┼─▶ Stage 3 Integration (+coverage gate) ─▶ Stage 4 Build/Artifact ─▶ Stage 5 Container (build + smoke)
+#   Security Scan ─┘   (pip-audit + SBOM run in parallel; dependency-review on PRs)
 on:
   push:
+    paths:
+      - "DevOps-Infra/ci-pipeline/**"
+      - ".github/workflows/ci.yml"
   pull_request:
+    paths:
+      - "DevOps-Infra/ci-pipeline/**"
+      - ".github/workflows/ci.yml"
   workflow_dispatch:
+
+# Least privilege by default; jobs widen only what they need.
+permissions:
+  contents: read
 
 # Avoid wasted runs: cancel superseded runs on the same ref.
 concurrency:
@@ -18,63 +31,117 @@ defaults:
 env:
   PYTHON_VERSION: "3.12"
   DEV_LOCK: "DevOps-Infra/ci-pipeline/requirements-dev.txt"
+  IMAGE: "d3-sample"
 
 jobs:
-  # ---- Stage 1: Lint (parallel with unit-tests) -------------------------------
+  # ---- Stage 1: Lint + type check (parallel with unit & security) -------------
   lint:
-    name: Stage 1 - Lint
+    name: Stage 1 - Lint & Types
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-          cache: pip                              # pip dependency cache
+          cache: pip
           cache-dependency-path: ${{ env.DEV_LOCK }}
-      - run: pip install -r requirements-dev.txt  # deterministic: from the lockfile
+      - run: pip install -r requirements-dev.txt # deterministic: from the lockfile
       - run: ruff check .
       - run: ruff format --check .
-      - run: echo "### ✅ Stage 1 Lint passed" >> "$GITHUB_STEP_SUMMARY"
+      - run: mypy app
+      - run: echo "### ✅ Stage 1 Lint + types passed" >> "$GITHUB_STEP_SUMMARY"
 
   # ---- Stage 2: Unit tests (parallel with lint) -------------------------------
   unit-tests:
     name: Stage 2 - Unit Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: ${{ env.DEV_LOCK }}
       - run: pip install -r requirements-dev.txt
-      - run: python -m pytest tests/test_unit.py -v
+      # Fast pure-logic gate. Whole-app coverage is enforced in Stage 3, where the
+      # full HTTP surface (and therefore every module) is actually exercised.
+      - run: python -m pytest tests/test_unit.py -v --no-cov
       - run: echo "### ✅ Stage 2 Unit tests passed" >> "$GITHUB_STEP_SUMMARY"
 
-  # ---- Stage 3: Integration tests (after unit) --------------------------------
-  integration-tests:
-    name: Stage 3 - Integration Tests
-    needs: [unit-tests]                            # fail fast: skipped if unit fails
+  # ---- Security: supply-chain scan (parallel; non-gating ordering) ------------
+  security-scan:
+    name: Security - Audit & SBOM
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: ${{ env.DEV_LOCK }}
+      - run: pip install pip-audit==2.10.1
+      # Audit the runtime dependency closure; --strict fails on any known advisory.
+      # Waiver process: add `--ignore-vuln <GHSA/PYSEC-ID>` here with a justifying
+      # comment + link once a fix is unavailable (see README "Security scanning").
+      - name: pip-audit (runtime deps)
+        run: pip-audit -r requirements.txt --strict
+      - name: Generate CycloneDX SBOM
+        uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+        with:
+          path: "DevOps-Infra/ci-pipeline"
+          format: cyclonedx-json
+          output-file: "DevOps-Infra/ci-pipeline/sbom.cyclonedx.json"
+          artifact-name: sbom-d3.cyclonedx.json
+      - run: echo "### ✅ Security scan passed (pip-audit + SBOM)" >> "$GITHUB_STEP_SUMMARY"
+
+  # ---- Dependency review (PRs only): block newly introduced vulnerable deps ----
+  dependency-review:
+    name: Security - Dependency Review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+
+  # ---- Stage 3: Integration tests + coverage gate (after unit) ----------------
+  integration-tests:
+    name: Stage 3 - Integration & Coverage
+    needs: [unit-tests] # fail fast: skipped if unit fails
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
           cache-dependency-path: ${{ env.DEV_LOCK }}
       - run: pip install -r requirements-dev.txt
-      - run: python -m pytest tests/test_integration.py -v
-      - run: echo "### ✅ Stage 3 Integration tests passed" >> "$GITHUB_STEP_SUMMARY"
+      # Exercises the full app via TestClient + validates the build artifact.
+      # pytest.ini enforces --cov=app --cov-fail-under=80 (the coverage gate).
+      - run: python -m pytest tests/test_integration.py tests/test_build_artifact.py -v --cov-report=xml
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: coverage-xml
+          path: "DevOps-Infra/ci-pipeline/coverage.xml"
+          retention-days: 7
+      - run: echo "### ✅ Stage 3 Integration + coverage gate (≥80%) passed" >> "$GITHUB_STEP_SUMMARY"
 
-  # ---- Stage 4: Build + Stage 6: Artifact publication -------------------------
+  # ---- Stage 4: Build + Artifact publication (needs lint + integration) -------
   build:
     name: Stage 4 - Build & Artifact
-    needs: [lint, integration-tests]               # gate: only build verified code
+    needs: [lint, integration-tests] # gate: only build verified code
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: pip
@@ -90,30 +157,48 @@ jobs:
           cat build-info.json
       - name: Package build artifact
         run: zip -r "d3-app-${{ github.run_number }}.zip" app requirements.txt build-info.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: d3-app-build
           path: "DevOps-Infra/ci-pipeline/d3-app-${{ github.run_number }}.zip"
           retention-days: 7
       - run: echo "### ✅ Stage 4 Build + artifact published" >> "$GITHUB_STEP_SUMMARY"
 
-  # ---- Stage 5: Container image build -----------------------------------------
+  # ---- Stage 5: Container image build + smoke test (needs build) --------------
   container:
     name: Stage 5 - Container Image
     needs: [build]
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
-      - name: Build image (no push)
-        uses: docker/build-push-action@v6
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+      - name: Build image (load into local daemon, no push)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
         with:
           context: "DevOps-Infra/ci-pipeline"
           push: false
           load: true
           tags: |
-            d3-sample:${{ github.sha }}
-            d3-sample:latest
-          cache-from: type=gha                     # docker layer cache
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          cache-from: type=gha
           cache-to: type=gha,mode=max
-      - run: echo "### ✅ Stage 5 Container image built (d3-sample:${{ github.sha }})" >> "$GITHUB_STEP_SUMMARY"
+      - name: Verify image runs as non-root (uid 10001)
+        run: |
+          uid="$(docker run --rm ${{ env.IMAGE }}:${{ github.sha }} id -u)"
+          echo "container uid=$uid"
+          test "$uid" = "10001"
+      - name: Smoke test (run container, hit /health + /add)
+        run: |
+          docker run -d --name d3-smoke -p 8000:8000 "${{ env.IMAGE }}:${{ github.sha }}"
+          for i in $(seq 1 30); do
+            if curl -fs http://localhost:8000/health >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -f http://localhost:8000/health
+          curl -f "http://localhost:8000/add?a=2&b=3"
+      - name: Stop & remove container (always)
+        if: always()
+        run: docker rm -f d3-smoke || true
+      - run: echo "### ✅ Stage 5 Container built + smoke-tested (${{ env.IMAGE }}:${{ github.sha }})" >> "$GITHUB_STEP_SUMMARY"

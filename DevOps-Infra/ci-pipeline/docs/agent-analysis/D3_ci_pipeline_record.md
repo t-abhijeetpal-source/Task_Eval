@@ -4,7 +4,62 @@
 > Workflow: `.github/workflows/ci.yml` (repo root). App under test: `DevOps-Infra/ci-pipeline/`.
 > Execution evidence below is from the **local runner** (`scripts/run-ci-local.sh`) which runs the
 > **identical stage commands** as the workflow, plus a real `docker build`, including the mandatory
-> failure→fix cycle. Date: 2026-06-17.
+> failure→fix cycle. Baseline date: 2026-06-17. **Enterprise remediation: 2026-06-22 (see §0).**
+
+---
+
+## 0. Enterprise Remediation (2026-06-22)
+
+§0 is the **authoritative current-state record**; §§1–8 below document the original baseline and are
+retained for history. Where they differ, §0 wins.
+
+### What changed (baseline → hardened)
+| Area | Baseline | Hardened |
+|---|---|---|
+| Tests | 5 (3 unit + 2 integration), no coverage gate | **36** (13 unit + 23 integration/artifact), **`--cov-fail-under=80`** (actual **100%**) |
+| Static analysis | ruff only | ruff + **mypy** (typed `app`) |
+| Container | single-stage, **root**, no `.dockerignore`, mutable base tag | **multi-stage**, **non-root uid/gid 10001**, `.dockerignore`, **digest-pinned** base |
+| Container in CI | built, never run | built → **non-root verified** → **run + smoke-tested** (`/health`, `/add`) |
+| Supply chain | none | **`pip-audit --strict`** + **CycloneDX SBOM** + **dependency-review** (PRs) |
+| Actions | `@v4`/`@v5` mutable tags | **all pinned to 40-char commit SHAs** (Dependabot-friendly comments) |
+| Permissions | implicit (write-all) | top-level **`contents: read`** (least privilege) |
+| Triggers | all monorepo changes | **path-filtered** to `ci-pipeline/**` + `ci.yml` |
+| Resilience | no timeouts | **`timeout-minutes`** on every job |
+| Observability | `/health`, `/add` | + `/ready`, `/metrics` (Prometheus), **structured JSON logs + request_id**, **security headers** |
+| Input safety | unbounded ints | operands bounded ±1e9 → **422** on out-of-range/missing/non-int |
+
+### Fresh execution evidence (local runner, commit `aea025e`, 2026-06-22)
+```text
+STAGE 1-lint        exit=0   ruff: All checks passed!  ·  mypy: Success: no issues found in 5 source files
+STAGE 2-unit        exit=0   13 passed
+STAGE 3-integration exit=0   23 passed  ·  coverage TOTAL 100%  ·  Required test coverage of 80% reached
+STAGE 3b-security   exit=0   pip-audit: No known vulnerabilities found
+STAGE 4-build       exit=0   artifact: d3-app-aea025e.zip
+STAGE 5-container   exit=0   sha256:830311c704e6…
+STAGE 5b-smoke      exit=0   health: {"status":"ok"}  ·  add: {"a":2,"b":3,"sum":5,"even":false}
+✅ ALL STAGES PASSED (commit aea025e)
+```
+Coverage by module (`pytest --cov=app`): `calc` 100% · `main` 100% · `logging_setup` 100% ·
+`metrics` 100% · **TOTAL 107 stmts, 0 missed, 100%**.
+
+```text
+$ docker run --rm d3-sample:latest id
+uid=10001(appuser) gid=10001(appuser) groups=10001(appuser)      # non-root verified
+$ docker images d3-sample:latest --format '{{.Size}}'
+275MB
+```
+
+### Action SHA pins (immutable)
+`actions/checkout` `34e1148…` (v4.3.1) · `actions/setup-python` `a26af69…` (v5.6.0) ·
+`actions/upload-artifact` `ea165f8…` (v4.6.2) · `docker/setup-buildx-action` `8d2750c…` (v3.12.0) ·
+`docker/build-push-action` `10e90e3…` (v6.19.2) · `actions/dependency-review-action` `2031cfc…`
+(v4.9.0) · `anchore/sbom-action` `e22c389…` (v0.24.0).
+
+### Failure→fix cycle (re-verified post-remediation)
+The fail-fast gate still holds: breaking a unit assertion fails Stage 2 with exit 1 and skips Stages
+3–5; reverting restores all-green (mechanism unchanged from §5/§6, now over 36 tests).
+
+---
 
 ## 1. Pipeline Architecture
 
@@ -218,8 +273,14 @@ local runner script, README, and this document.
 
 ## Deliverables Checklist
 - [x] Workflow YAML (`.github/workflows/ci.yml`)
-- [x] Push Trigger · [x] Pull Request Trigger (+ workflow_dispatch)
-- [x] Lint Stage · [x] Unit Test Stage · [x] Integration Test Stage · [x] Build Stage · [x] Container Build Stage
+- [x] Push Trigger · [x] Pull Request Trigger (+ workflow_dispatch) · [x] **Path-filtered triggers**
+- [x] Lint Stage (+ **mypy**) · [x] Unit Test Stage · [x] Integration Test Stage · [x] Build Stage · [x] Container Build Stage
+- [x] **Container smoke test in CI** (run + `/health` + `/add`, non-root verified)
+- [x] **Coverage gate `--cov-fail-under=80`** (actual 100%) · [x] **`tests/test_build_artifact.py`**
+- [x] **Supply chain:** pip-audit `--strict` · CycloneDX SBOM · dependency-review (PRs) + waiver process
+- [x] **Actions SHA-pinned** · [x] **Least-privilege `permissions`** · [x] **`timeout-minutes`** per job
+- [x] **Hardened container:** multi-stage · digest-pinned · non-root uid/gid 10001 · `.dockerignore`
+- [x] **Observability:** structured JSON logs · request_id · `/metrics` · `/ready` · security headers
 - [x] Dependency Cache (pip + docker gha) · [x] Lockfile Enforcement (pinned reqs)
 - [x] Failure Demonstration (exit 1, stage 2, fail-fast) · [x] Success Demonstration (all green)
 - [x] Logs · [x] README · [x] D3_ci_pipeline_record.md

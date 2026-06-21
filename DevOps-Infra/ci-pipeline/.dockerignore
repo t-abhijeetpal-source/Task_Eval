@@ -1,0 +1,25 @@
+# Keep the build context tiny and reproducible — only app + requirements ship.
+.venv/
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
+tests/
+docs/
+screenshots/
+*.png
+*.zip
+build-info.json
+sbom*.json
+Dockerfile
+.dockerignore
+.gitignore
+README.md
+scripts/
+requirements-dev.txt
+.git/

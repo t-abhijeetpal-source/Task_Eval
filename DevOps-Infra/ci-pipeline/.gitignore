@@ -3,5 +3,10 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+.mypy_cache/
+.coverage
+coverage.xml
+htmlcov/
 build-info.json
 d3-app-*.zip
+sbom*.json
