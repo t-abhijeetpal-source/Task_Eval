@@ -272,6 +272,59 @@ def test_callback_overwrite_rejected(client, auth):
     assert body["score"] == 90 and body["risk_level"] == "high"
 
 
+# --- A3 production-hardening tests (readiness probe, optional ingest key) ---
+
+def test_readiness_ok(client):
+    """A3-009: readiness reports both dependencies healthy in the happy path."""
+    resp = client.get("/health/ready")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
+    assert body["checks"] == {"database": "ok", "queue": "ok"}
+
+
+def test_readiness_503_when_queue_unwritable(client, monkeypatch):
+    """A3-009: a down dependency (queue not writable) returns 503, not 200."""
+    from app import routes
+
+    monkeypatch.setattr(routes.queue, "writable", lambda: False)
+    resp = client.get("/health/ready")
+    assert resp.status_code == 503
+    body = resp.json()
+    assert body["status"] == "unavailable"
+    assert body["checks"]["queue"].startswith("error")
+
+
+def test_ingest_api_key_enforced_when_configured(client, monkeypatch):
+    """A3-012: when A3_API_KEY is set, POST /transactions requires X-API-Key."""
+    from app import routes
+
+    monkeypatch.setattr(routes, "_API_KEY", "secret-ingest-key")
+    # missing key -> 401
+    assert client.post("/transactions", json=_valid_txn()).status_code == 401
+    # wrong key -> 401
+    assert (
+        client.post(
+            "/transactions", json=_valid_txn(), headers={"X-API-Key": "nope"}
+        ).status_code
+        == 401
+    )
+    # correct key -> 201
+    assert (
+        client.post(
+            "/transactions",
+            json=_valid_txn(),
+            headers={"X-API-Key": "secret-ingest-key"},
+        ).status_code
+        == 201
+    )
+
+
+def test_ingest_open_in_demo_mode(client):
+    """A3-012: with no A3_API_KEY configured (default), ingest is open (demo)."""
+    assert client.post("/transactions", json=_valid_txn()).status_code == 201
+
+
 def test_concurrent_duplicate_create_no_500(client, monkeypatch):
     """A5-16: when the idempotency pre-check races (TOCTOU) and misses, the PK
     violation on commit must be caught and returned as 409, never a 500."""

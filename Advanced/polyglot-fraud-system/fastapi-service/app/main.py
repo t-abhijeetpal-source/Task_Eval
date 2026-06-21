@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 
@@ -15,15 +16,17 @@ if not logger.handlers:
     logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-app = FastAPI(title="Transaction Ingestion Service")
 
-
-@app.on_event("startup")
-def on_startup():
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
     # Import models so tables are registered on Base.metadata before create_all.
     from . import models  # noqa: F401
 
     Base.metadata.create_all(bind=engine)
+    yield
+
+
+app = FastAPI(title="Transaction Ingestion Service", lifespan=lifespan)
 
 
 @app.middleware("http")

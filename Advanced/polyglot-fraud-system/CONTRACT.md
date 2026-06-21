@@ -93,8 +93,13 @@ GET /transactions/<id> (FastAPI) → returns txn + score + status
 - `POST /transactions` body=Transaction → `201 {transaction_id, status:"pending", request_id}`; `422 {"error":...}` on invalid (amount≤0, missing fields).
 - `GET /transactions/{id}` → `200 {transaction, score|null, risk_level|null, status}`; `404` if unknown.
 - `POST /internal/transactions/{id}/score` body=ScoreResult → `200`; persists score, status=`scored`.
-- `GET /health` → `{"status":"ok"}`.
-- Env: `QUEUE_DIR` (default `./queue`), `DATABASE_URL` (default sqlite file). Structured JSON logs with `request_id`.
+- `GET /health` → `{"status":"ok"}` (liveness). `GET /health/ready` → `200 {"status":"ok","checks":{"database":"ok","queue":"ok"}}` or `503` if a dependency is down (readiness).
+- Env:
+  - `A3_INTERNAL_TOKEN` — **REQUIRED** (no default). Shared secret for `/internal/*`; the endpoint is
+    **fail-closed** (503 to all callers when unset). The Node worker must send the same value as `X-Internal-Token`.
+  - `A3_API_KEY` — optional. When set, `POST /transactions` requires a matching `X-API-Key`; unset = demo-open.
+  - `QUEUE_DIR` (default `./queue`), `DATABASE_URL` (default `sqlite:///./data/a3.db`).
+  - Structured JSON logs with `request_id` (echoed as the `X-Request-ID` response header).
 
 **Rust engine** (`rust-engine/`, binary `fraud-engine`):
 - Reads ONE transaction JSON from **stdin** → writes ONE score-result JSON to **stdout**, exit `0`.
@@ -113,12 +118,21 @@ GET /transactions/<id> (FastAPI) → returns txn + score + status
 ## Repository layout
 
 ```
-A3/
-├── fastapi-service/   (app/, tests/, requirements.txt)
-├── node-worker/       (src/, tests/, package.json)
-├── rust-engine/       (src/, tests/, Cargo.toml)
-├── integration-tests/ (end-to-end script — coordinator owns)
-├── CONTRACT.md        (this file)
-├── README.md
-└── docs/agent-analysis/A3_polyglot_system.md
+polyglot-fraud-system/
+├── fastapi-service/      (app/, tests/, requirements.txt, Dockerfile)
+├── node-worker/          (src/, tests/, package.json, Dockerfile)
+├── rust-engine/          (src/, tests/, Cargo.toml)
+├── integration-tests/    (end-to-end script — coordinator owns)
+├── scripts/              (capture_verification.sh, contract_conformance.sh, validate_a3_deliverable.sh)
+├── prompts/              (per-component agent prompts + coordinator)
+├── artifacts/repro/      (captured verification logs — evidence)
+├── screenshots/          (curated PNGs + raw/)
+├── .github/workflows/    (a3-polyglot-fraud-system.yml — CI gate)
+├── docker-compose.yml    (api + worker, shared queue volume)
+├── mise.toml             (pinned toolchain: Python 3.12.7 · Node 26 · Rust 1.96)
+├── .env.example          (A3_INTERNAL_TOKEN required; A3_API_KEY optional)
+├── CONTRACT.md           (this file — single source of truth)
+├── README.md  ·  RUNBOOK.md  ·  VERIFICATION_RESULTS.md
+└── docs/  (agent-analysis/A3_polyglot_system.md, agent-analysis/A3_manifest.json,
+           A3_engineering_evaluation_audit.md, A3_remediation_tracker.md, A3_final_scorecard.md)
 ```

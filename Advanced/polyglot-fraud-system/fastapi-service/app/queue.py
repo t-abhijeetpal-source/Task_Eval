@@ -1,9 +1,31 @@
 import json
 import os
+import tempfile
 
 
 def _queue_dir() -> str:
     return os.environ.get("QUEUE_DIR", "./queue")
+
+
+def writable() -> bool:
+    """Readiness probe: confirm the queue directory exists and is writable.
+
+    Creates (if needed) the queue dir and writes+removes a tiny temp file. Any
+    OSError (missing parent, read-only mount, permissions) returns False so the
+    readiness endpoint can fail-fast instead of silently dropping enqueues.
+    """
+    queue_dir = _queue_dir()
+    try:
+        os.makedirs(queue_dir, exist_ok=True)
+        fd, path = tempfile.mkstemp(prefix=".health-", dir=queue_dir)
+        try:
+            os.write(fd, b"ok")
+        finally:
+            os.close(fd)
+            os.unlink(path)
+        return True
+    except OSError:
+        return False
 
 
 def enqueue(txn: dict) -> str:

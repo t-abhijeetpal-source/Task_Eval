@@ -17,6 +17,22 @@ if DATABASE_URL.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
 engine = create_engine(DATABASE_URL, connect_args=connect_args)
+
+# SQLite WAL: allow a reader (GET /transactions) to proceed concurrently with
+# the score-callback writer instead of serializing on a single global lock.
+# WAL also survives a crash mid-write without corrupting the db file. No-op for
+# in-memory / non-sqlite URLs.
+if DATABASE_URL.startswith("sqlite") and ":memory:" not in DATABASE_URL:
+    from sqlalchemy import event
+
+    @event.listens_for(engine, "connect")
+    def _set_sqlite_pragma(dbapi_connection, _connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute("PRAGMA busy_timeout=5000")
+        cursor.close()
+
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

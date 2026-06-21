@@ -1,0 +1,51 @@
+# A3 polyglot fraud system — one-command stack.
+#   export A3_INTERNAL_TOKEN=$(openssl rand -hex 32)
+#   docker compose up --build
+# api (:8000) and worker share the queue volume; the worker posts scores back
+# over HTTP using the SAME fail-closed internal token.
+services:
+  api:
+    build:
+      context: ./fastapi-service
+    image: a3-fastapi-service
+    ports:
+      - "8000:8000"
+    environment:
+      # REQUIRED: fail-closed internal-callback auth (A5-2/A5-17). No default on
+      # purpose — `docker compose up` errors if you haven't exported it.
+      A3_INTERNAL_TOKEN: ${A3_INTERNAL_TOKEN:?set A3_INTERNAL_TOKEN, e.g. export A3_INTERNAL_TOKEN=$(openssl rand -hex 32)}
+      A3_API_KEY: ${A3_API_KEY:-}
+      QUEUE_DIR: /queue
+      DATABASE_URL: sqlite:////data/a3.db
+    volumes:
+      - queue:/queue
+      - data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health/ready').status==200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+
+  worker:
+    build:
+      # Component root as context so the Dockerfile can pull in rust-engine/.
+      context: .
+      dockerfile: node-worker/Dockerfile
+    image: a3-node-worker
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      A3_INTERNAL_TOKEN: ${A3_INTERNAL_TOKEN:?set A3_INTERNAL_TOKEN}
+      API_URL: http://api:8000
+      QUEUE_DIR: /queue
+      ENGINE_BIN: /usr/local/bin/fraud-engine
+    volumes:
+      - queue:/queue
+    restart: unless-stopped
+
+volumes:
+  queue:
+  data:

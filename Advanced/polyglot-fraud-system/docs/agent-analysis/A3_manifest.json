@@ -1,0 +1,47 @@
+{
+  "id": "A3",
+  "name": "polyglot-fraud-system",
+  "title": "Polyglot Fraud-Score System (FastAPI + Node worker + Rust engine)",
+  "path": "Advanced/polyglot-fraud-system",
+  "contract": { "file": "CONTRACT.md", "schema_version": "1.0", "locked": true },
+  "single_source_of_truth": {
+    "scoring_logic": "rust-engine",
+    "data_contract": "CONTRACT.md"
+  },
+  "toolchain": {
+    "python": "3.12.7",
+    "node": "26.3.0",
+    "rust": "1.96.0",
+    "pinned_by": "mise.toml"
+  },
+  "components": [
+    { "name": "fastapi-service", "language": "python", "role": "ingest + persist + serve", "port": 8000 },
+    { "name": "node-worker", "language": "javascript", "role": "queue consumer + engine invoker + callback" },
+    { "name": "rust-engine", "language": "rust", "role": "deterministic scoring (CLI + lib)" },
+    { "name": "integration-tests", "language": "bash", "role": "end-to-end cross-language verification" }
+  ],
+  "verification": {
+    "source_of_truth": "VERIFICATION_RESULTS.md",
+    "regenerated_by": "scripts/capture_verification.sh",
+    "evidence_dir": "artifacts/repro",
+    "tests": {
+      "rust": 7,
+      "fastapi": 22,
+      "node": 14,
+      "contract_conformance": "4/4",
+      "integration": "4/4"
+    }
+  },
+  "security": {
+    "internal_callback": "fail-closed (A3_INTERNAL_TOKEN required; 503 when unset)",
+    "public_ingest": "optional A3_API_KEY (demo-open by default)",
+    "hardening_source": "../adversarial-pr-review (A5)"
+  },
+  "ci": ".github/workflows/a3-polyglot-fraud-system.yml",
+  "make_target": "a3-verify",
+  "audit": {
+    "evaluation": "docs/A3_engineering_evaluation_audit.md",
+    "tracker": "docs/A3_remediation_tracker.md",
+    "scorecard": "docs/A3_final_scorecard.md"
+  }
+}

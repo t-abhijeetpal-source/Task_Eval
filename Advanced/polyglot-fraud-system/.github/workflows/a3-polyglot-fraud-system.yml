@@ -1,0 +1,87 @@
+name: A3 Polyglot Fraud System
+
+on:
+  push:
+    paths:
+      - "Advanced/polyglot-fraud-system/**"
+      - ".github/workflows/a3-polyglot-fraud-system.yml"
+  pull_request:
+    paths:
+      - "Advanced/polyglot-fraud-system/**"
+      - ".github/workflows/a3-polyglot-fraud-system.yml"
+  workflow_dispatch: {}
+
+defaults:
+  run:
+    working-directory: Advanced/polyglot-fraud-system
+
+jobs:
+  verify:
+    name: build + test + integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      # Integration + pytest need the fail-closed internal token (A5-2 / A5-17).
+      A3_INTERNAL_TOKEN: ci-internal-token-not-a-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.7"
+
+      # Pin Node + Rust to the EXACT versions in mise.toml and the captured
+      # evidence (VERIFICATION_RESULTS.md). The gate must run what was verified
+      # and what the containers ship — not a drifting "stable" / latest-LTS.
+      - name: Set up Node 26.3.0
+        uses: actions/setup-node@v4
+        with:
+          node-version: "26.3.0"
+
+      - name: Set up Rust 1.96.0
+        uses: dtolnay/rust-toolchain@1.96.0
+
+      # ---- Rust ----
+      - name: Rust build + test
+        run: |
+          cd rust-engine
+          cargo build --release
+          cargo test
+
+      # ---- FastAPI ----
+      - name: FastAPI deps + pytest
+        run: |
+          cd fastapi-service
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pytest -q
+
+      # ---- Node ----
+      - name: Node deps + jest
+        run: |
+          cd node-worker
+          npm ci || npm install
+          npm test
+
+      # ---- Contract conformance (engine vs CONTRACT.md) ----
+      - name: Contract conformance
+        run: bash scripts/contract_conformance.sh
+
+      # ---- End-to-end integration ----
+      - name: End-to-end integration
+        run: bash integration-tests/run_integration.sh
+
+      # ---- Deliverable validation gate ----
+      - name: Validate deliverable (structure + doc consistency)
+        run: bash scripts/validate_a3_deliverable.sh
+
+      - name: Upload verification logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a3-repro-logs
+          path: Advanced/polyglot-fraud-system/artifacts/repro/
+          if-no-files-found: ignore

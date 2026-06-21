@@ -1,0 +1,23 @@
+# Python
+fastapi-service/.venv/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.coverage
+fastapi-service/data/
+fastapi-service/queue/
+
+# Node
+node-worker/node_modules/
+node-worker/coverage/
+
+# Rust
+rust-engine/target/
+
+# Integration / runtime scratch
+integration-tests/.run/
+runtime_*.log
+artifacts/repro/*.log
+
+# OS
+.DS_Store

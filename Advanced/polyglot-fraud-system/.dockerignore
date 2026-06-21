@@ -1,0 +1,15 @@
+**/.venv
+**/node_modules
+**/target
+**/__pycache__
+**/.pytest_cache
+**/.coverage
+integration-tests/.run
+artifacts/repro/*.log
+screenshots
+docs
+**/*.md
+.git
+.github
+*.log
+.DS_Store

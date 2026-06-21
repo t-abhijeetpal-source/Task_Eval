@@ -36,7 +36,10 @@ A1_DIR := "Advanced/parallel-repo-analysis"
 # A6 performance optimization (profiles + optimizes A2's GET /api/summary).
 A6_DIR := "Advanced/performance-optimization"
 
-.PHONY: help bootstrap doctor setup-env verify test rust node python i1-verify i3-verify i3-flutter-verify i4-verify a1-validate a2-verify a2-docker-smoke a3-integration a6-verify clean
+# A3 polyglot fraud system (FastAPI + Node worker + Rust engine; file-queue + HTTP callback).
+A3_DIR := Advanced/polyglot-fraud-system
+
+.PHONY: help bootstrap doctor setup-env verify test rust node python i1-verify i3-verify i3-flutter-verify i4-verify a1-validate a2-verify a2-docker-smoke a3-integration a3-verify a6-verify clean
 
 help:  ## Show available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) \
@@ -159,7 +162,28 @@ a1-validate:  ## Validate the A1 parallel-repo-analysis deliverables (9 reports 
 	@echo "== ✅ A1 VALIDATE PASSED =="
 
 a3-integration:  ## Run the A3 polyglot end-to-end integration test
-	@bash "Advanced/polyglot-fraud-system/integration-tests/run_integration.sh"
+	@bash "$(A3_DIR)/integration-tests/run_integration.sh"
+
+# ---- A3 — polyglot fraud system (full one-command verify) ----------------------
+a3-verify:  ## Verify A3 (Rust + pytest + Node + contract conformance + e2e integration + deliverable gate; regenerates evidence)
+	@echo "== a3: $(A3_DIR) =="
+	@echo "-- Rust engine: build --release + cargo test --"
+	@( cd $(A3_DIR)/rust-engine && $(RUN) cargo build --release && $(RUN) cargo test ) || exit 1
+	@echo "-- FastAPI: venv + pytest --"
+	@( cd $(A3_DIR)/fastapi-service && $(RUN) python -m venv .venv && . .venv/bin/activate \
+		&& pip -q install --upgrade pip >/dev/null && pip -q install -r requirements.txt \
+		&& python -m pytest -q ) || exit 1
+	@echo "-- Node worker: install + jest --"
+	@( cd $(A3_DIR)/node-worker && $(RUN) npm install --silent && $(RUN) npm test ) || exit 1
+	@echo "-- Contract conformance: 4 canonical vectors through the engine --"
+	@( cd $(A3_DIR) && $(RUN) bash scripts/contract_conformance.sh )
+	@echo "-- Capture evidence + regenerate VERIFICATION_RESULTS.md (runs e2e integration) --"
+	@# cd into A3 so `mise exec` resolves the A3 mise.toml pins (Node 26.3.0 / Rust 1.96.0),
+	@# not the monorepo-root pins — the captured evidence must reflect THIS component's toolchain.
+	@( cd $(A3_DIR) && $(RUN) bash scripts/capture_verification.sh )
+	@echo "-- Deliverable validation gate (structure + doc consistency) --"
+	@( cd $(A3_DIR) && bash scripts/validate_a3_deliverable.sh )
+	@echo "== ✅ A3 VERIFY PASSED =="
 
 clean:  ## Remove generated venvs / node_modules / build artifacts
 	@find . -type d \( -name .venv -o -name node_modules -o -name target \

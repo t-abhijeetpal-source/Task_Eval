@@ -1,0 +1,9 @@
+# Pinned toolchain for the A3 polyglot fraud system. These are the EXACT versions
+# the committed evidence (artifacts/repro/, VERIFICATION_RESULTS.md), the CI gate
+# (.github/workflows/a3-polyglot-fraud-system.yml), and the container images
+# (fastapi-service/Dockerfile, node-worker/Dockerfile) all build on. `mise install`
+# then `mise current` reproduces them.
+[tools]
+python = "3.12.7"
+node = "26.3.0"
+rust = "1.96.0"

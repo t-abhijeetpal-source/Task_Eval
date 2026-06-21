@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from . import queue
@@ -22,6 +23,13 @@ router = APIRouter()
 # denies all callers (503 misconfigured) rather than silently accepting them.
 # There is no configuration in which /internal/* is reachable without a token.
 _INTERNAL_TOKEN = os.environ.get("A3_INTERNAL_TOKEN") or None
+
+# Optional public ingestion key for POST /transactions (A3-012). The demo runs
+# open by default (no key configured). When A3_API_KEY is set, every ingest must
+# present a matching X-API-Key header — this lets the same code run locked-down
+# in shared/staging environments without a code change. Unlike the internal
+# token this is NOT fail-closed: an unset key is the documented demo mode.
+_API_KEY = os.environ.get("A3_API_KEY") or None
 
 _VALID_RISK_LEVELS = {"low", "medium", "high"}
 
@@ -65,13 +73,50 @@ def _txn_to_dict(txn: Transaction) -> dict:
 
 @router.get("/health")
 def health():
+    """Liveness probe — process is up. Contract-locked shape: {"status":"ok"}."""
     return {"status": "ok"}
+
+
+@router.get("/health/ready")
+def readiness(db: Session = Depends(get_db)):
+    """Readiness probe (A3-009): the service can actually do work.
+
+    Checks the two hard dependencies — the database (SELECT 1) and the queue
+    directory (writable) — and returns 503 with the failing component if either
+    is down, so an orchestrator stops routing traffic instead of black-holing
+    transactions. Liveness (/health) stays a pure process-up check.
+    """
+    checks = {"database": "ok", "queue": "ok"}
+    healthy = True
+
+    try:
+        db.execute(text("SELECT 1"))
+    except SQLAlchemyError as exc:
+        checks["database"] = f"error: {type(exc).__name__}"
+        healthy = False
+
+    if not queue.writable():
+        checks["queue"] = "error: queue dir not writable"
+        healthy = False
+
+    body = {"status": "ok" if healthy else "unavailable", "checks": checks}
+    return body if healthy else JSONResponse(status_code=503, content=body)
 
 
 @router.post("/transactions")
 def create_transaction(
-    payload: TransactionIn, request: Request, db: Session = Depends(get_db)
+    payload: TransactionIn,
+    request: Request,
+    db: Session = Depends(get_db),
+    x_api_key: str | None = Header(default=None),
 ):
+    # Optional public-ingest auth (A3-012). Open in demo mode; enforced when
+    # A3_API_KEY is configured. Constant-time compare to avoid timing leaks.
+    if _API_KEY is not None and (
+        x_api_key is None or not hmac.compare_digest(x_api_key, _API_KEY)
+    ):
+        return JSONResponse(status_code=401, content={"error": "invalid api key"})
+
     if payload.amount <= 0:
         return JSONResponse(
             status_code=422, content={"error": "amount must be positive"}

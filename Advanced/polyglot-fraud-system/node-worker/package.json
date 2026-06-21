@@ -7,6 +7,9 @@
     "start": "node src/worker.js",
     "test": "jest"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "axios": "^1.7"
   },
