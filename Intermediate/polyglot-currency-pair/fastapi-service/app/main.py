@@ -1,4 +1,7 @@
-"""FastAPI application entry point.
+"""FastAPI application entry point (I4).
+
+Thin entry: the conversion logic, schemas, and routes (POST /convert, GET /health)
+all live in the shared ``currency_core`` package. This module only assembles the app.
 
 Run with:
     uvicorn app.main:app --reload
@@ -6,7 +9,7 @@ Run with:
 
 from fastapi import FastAPI
 
-from app.routes import router
+from currency_core.routes import router
 
 app = FastAPI(
     title="Currency Conversion Service",

@@ -1,0 +1,14 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+*.egg-info/
+build/
+
+# Node
+node_modules/
+
+# Integration run artifacts
+integration-tests/.run/

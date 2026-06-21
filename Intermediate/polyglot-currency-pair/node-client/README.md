@@ -19,11 +19,15 @@ node src/convert.js 100 USD INR
 # -> 100 USD = 8300 INR
 ```
 
-Override the API location with the `API_URL` env var (default `http://localhost:8000`):
+Override the API location with `API_URL` (default `http://localhost:8000`) and the per-request
+timeout with `API_TIMEOUT_MS` (default `5000`):
 
 ```bash
-API_URL=http://localhost:9000 node src/convert.js 100 USD INR
+API_URL=http://localhost:9000 API_TIMEOUT_MS=2000 node src/convert.js 100 USD INR
 ```
+
+The `amount` is validated and sent as a **string** (no `Number()` coercion), so decimal precision
+is preserved end-to-end and the FastAPI service parses it as an exact `Decimal`.
 
 ## Test
 

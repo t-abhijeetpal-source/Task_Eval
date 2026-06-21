@@ -24,7 +24,10 @@ I3_SANDBOX := "Intermediate/minimal-safe-change/sandbox"
 # I1 ER-diagram task (artifact validator + spec-sync guard; no live repo required).
 I1_DIR := "Intermediate/er-diagram"
 
-.PHONY: help bootstrap doctor setup-env verify test rust node python i1-verify i3-verify i3-flutter-verify a3-integration clean
+# I4 polyglot currency pair (FastAPI service + Node CLI, shared currency_core).
+I4_DIR := "Intermediate/polyglot-currency-pair"
+
+.PHONY: help bootstrap doctor setup-env verify test rust node python i1-verify i3-verify i3-flutter-verify i4-verify a3-integration clean
 
 help:  ## Show available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) \
@@ -62,7 +65,7 @@ python:  ## Create venv + install + test all Python services
 			&& pip -q install -r requirements.txt && python -m pytest -q ) || exit 1; done
 
 verify: test  ## Alias for the full test suite
-test: rust node python i3-verify i1-verify  ## Run every test suite (Rust + Node + Python + I3 sandbox + I1 ER diagram)
+test: rust node python i3-verify i1-verify i4-verify  ## Run every test suite (Rust + Node + Python + I3 sandbox + I1 ER diagram + I4 polyglot pair)
 	@echo "== ALL SUITES PASSED =="
 
 # ---- I1 — ER-diagram artifact (validator + tests + spec-sync; offline) ---------
@@ -90,6 +93,19 @@ i3-flutter-verify:  ## (Optional) Run the extended Flutter proof; skips cleanly 
 	else \
 		echo "== i3 flutter (extended): SKIPPED — flutter SDK not found (optional, not required for bootstrap) =="; \
 	fi
+
+# ---- I4 — polyglot currency pair (core + service + client + live integration) -
+i4-verify:  ## Verify I4 polyglot pair (currency_core + service pytest + client jest + live integration + perf gate)
+	@echo "== i4: $(I4_DIR) =="
+	@( cd $(I4_DIR)/fastapi-service && $(RUN) python -m venv .venv && . .venv/bin/activate \
+		&& pip -q install -r requirements.txt \
+		&& echo "-- shared currency_core tests --" && python -m pytest -q ../../shared/currency-core/tests \
+		&& echo "-- service tests --" && python -m pytest -q \
+		&& echo "-- perf gate: p50 POST /convert < 10ms --" && python bench_convert.py ) || exit 1
+	@echo "-- client tests --"
+	@( cd $(I4_DIR)/node-client && $(RUN) npm install --silent && $(RUN) npm test ) || exit 1
+	@echo "-- live integration: 6 rate pairs + 4 exit codes over real HTTP --"
+	@$(RUN) bash "Intermediate/polyglot-currency-pair/integration-tests/run_integration.sh"
 
 a3-integration:  ## Run the A3 polyglot end-to-end integration test
 	@bash "Advanced/polyglot-fraud-system/integration-tests/run_integration.sh"
