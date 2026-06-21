@@ -1,0 +1,14 @@
+# A6 AFTER — optimized GET /api/summary endpoint latency (TestClient)
+# Generated: 2026-06-21  |  Python 3.12.7  |  macOS arm64  |  SQLite temp file
+# Command: python bench_summary.py
+
+env: python=3.12.7  N=50000  iters=15  db=sqlite(temp)
+seeded 50000 rows in 0.35s
+correctness: count=50000  total=12550000.00  categories=6
+
+/api/summary latency over 15 runs (N=50000):
+  min   = 29.99 ms
+  p50   = 30.65 ms
+  p95   = 31.50 ms
+  max   = 32.20 ms
+  mean  = 30.75 ms

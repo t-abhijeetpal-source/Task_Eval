@@ -1,0 +1,14 @@
+# A6 scaling — slow vs fast p50 across N (O(N) divergence)
+# Generated: 2026-06-21  |  Python 3.12.7  |  macOS arm64  |  SQLite temp file
+# Command: python bench_summary.py --scaling
+
+env: python=3.12.7  iters/size=8  db=sqlite(temp)
+
+Scaling — p50 latency by row count (slow naive ORM vs fast SQL GROUP BY):
+
+| N | before p50 (ms) | after p50 (ms) | speedup |
+|---|---|---|---|
+| 1,000 | 3.73 | 0.50 | 7.5x |
+| 10,000 | 52.03 | 4.24 | 12.3x |
+| 50,000 | 331.96 | 28.91 | 11.5x |
+| 100,000 | 676.94 | 60.20 | 11.2x |

@@ -1,0 +1,28 @@
+# A6 cProfile BEFORE — naive ORM .all() hot path (10 calls)
+# Generated: 2026-06-21  |  Python 3.12.7  |  macOS arm64  |  SQLite temp file
+# Command: python bench_summary.py --profile --before
+
+env: python=3.12.7  N=50000  iters=15  db=sqlite(temp)
+
+===== cProfile BEFORE (naive ORM .all(), 10 calls) (top by tottime) =====
+         11002001 function calls (11001981 primitive calls) in 4.584 seconds
+
+   Ordered by: internal time
+   List reduced from 163 to 12 due to restriction <12>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   500000    1.403    0.000    1.403    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:201(__init__)
+   500000    0.503    0.000    2.639    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/orm/loading.py:1068(_instance)
+       10    0.412    0.041    0.412    0.041 {method 'fetchall' of 'sqlite3.Cursor' objects}
+       10    0.328    0.033    3.699    0.370 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/engine/result.py:582(_allrows)
+   500000    0.237    0.000    0.237    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/orm/loading.py:1329(_populate_full)
+   500000    0.231    0.000    1.711    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/orm/instrumentation.py:501(new_instance)
+  2000000    0.223    0.000    0.223    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/orm/attributes.py:555(__get__)
+       10    0.178    0.018    4.341    0.434 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/performance-optimization/snapshots/summary_slow.py:20(summary_slow)
+       10    0.127    0.013    0.566    0.057 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/engine/result.py:576(_raw_all_rows)
+  1000000    0.123    0.000    0.235    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/app/models.py:34(amount)
+   500000    0.101    0.000    0.147    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/orm/identity.py:262(_fast_discard)
+   500000    0.096    0.000    0.243    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/orm/state.py:539(_cleanup)
+
+
+

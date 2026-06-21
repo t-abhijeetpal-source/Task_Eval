@@ -1,0 +1,61 @@
+{
+  "task": "A6",
+  "title": "Performance Profiling & Targeted Optimization",
+  "target": "GET /api/summary",
+  "target_file": "Advanced/parallel-expense-tracker/app/routes.py",
+  "method": "measure -> profile -> identify -> minimal change -> verify",
+  "date": "2026-06-21",
+  "environment": {
+    "python": "3.12.7",
+    "framework": "FastAPI + SQLAlchemy 2",
+    "database": "SQLite (temp file)",
+    "harness": "starlette TestClient",
+    "platform": "macOS arm64",
+    "n_rows": 50000,
+    "iters": 15
+  },
+  "bottleneck": {
+    "summary": "ORM object materialization (db.query(Expense).all()), not the database",
+    "evidence": "cProfile: orm/state.__init__ 1.403s tottime, 2,000,000 attributes.__get__; fetchall only 0.41s (~9%)",
+    "fix": "SQL GROUP BY + func.sum over indexed INTEGER amount_cents; return 6 tuples instead of 50,000 ORM objects"
+  },
+  "metrics": {
+    "before_p50_ms": 328.71,
+    "after_p50_ms": 28.89,
+    "after_endpoint_p50_ms": 30.65,
+    "improvement_pct": 91.2,
+    "speedup_x": 11.4,
+    "cprofile_before_calls": 11002001,
+    "cprofile_after_calls": 48111,
+    "cprofile_before_wall_s": 4.584,
+    "cprofile_after_wall_s": 0.318,
+    "rows_materialized_before": 50000,
+    "rows_materialized_after": 6
+  },
+  "scaling": [
+    { "n": 1000, "before_p50_ms": 3.73, "after_p50_ms": 0.50, "speedup_x": 7.5 },
+    { "n": 10000, "before_p50_ms": 52.03, "after_p50_ms": 4.24, "speedup_x": 12.3 },
+    { "n": 50000, "before_p50_ms": 331.96, "after_p50_ms": 28.91, "speedup_x": 11.5 },
+    { "n": 100000, "before_p50_ms": 676.94, "after_p50_ms": 60.20, "speedup_x": 11.2 }
+  ],
+  "correctness": {
+    "count": 50000,
+    "total": 12550000.00,
+    "total_cents": 1255000000,
+    "categories": 6,
+    "slow_equals_fast": true,
+    "integer_cents_exact": true
+  },
+  "verification": {
+    "pytest": "40 passed",
+    "perf_gate_ceiling_ms": 50,
+    "perf_gate_status": "pass"
+  },
+  "artifacts": {
+    "report": "docs/agent-analysis/A6_performance_improvement.md",
+    "repro_dir": "artifacts/repro/",
+    "bench": "bench_summary.py",
+    "slow_snapshot": "snapshots/summary_slow.py",
+    "perf_gate": "Advanced/parallel-expense-tracker/scripts/perf_guard.py"
+  }
+}

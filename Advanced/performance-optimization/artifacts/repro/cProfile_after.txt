@@ -1,0 +1,28 @@
+# A6 cProfile AFTER — optimized endpoint hot path (10 calls)
+# Generated: 2026-06-21  |  Python 3.12.7  |  macOS arm64  |  SQLite temp file
+# Command: python bench_summary.py --profile
+
+env: python=3.12.7  N=50000  iters=15  db=sqlite(temp)
+
+===== cProfile AFTER (SQL GROUP BY endpoint, 10 calls) (top by tottime) =====
+         48111 function calls (47124 primitive calls) in 0.318 seconds
+
+   Ordered by: internal time
+   List reduced from 815 to 12 due to restriction <12>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+       10    0.239    0.024    0.239    0.024 {method 'fetchall' of 'sqlite3.Cursor' objects}
+       10    0.050    0.005    0.050    0.005 {method 'execute' of 'sqlite3.Cursor' objects}
+      320    0.003    0.000    0.003    0.000 {method 'control' of 'select.kqueue' objects}
+      300    0.001    0.000    0.018    0.000 /Users/abhijeetpal/.local/share/mise/installs/python/3.12.7/lib/python3.12/asyncio/base_events.py:1909(_run_once)
+  588/140    0.001    0.000    0.314    0.002 {method 'acquire' of '_thread.lock' objects}
+  490/450    0.000    0.000    0.304    0.001 {method 'run' of '_contextvars.Context' objects}
+      140    0.000    0.000    0.000    0.000 {method 'recv' of '_socket.socket' objects}
+      300    0.000    0.000    0.006    0.000 /Users/abhijeetpal/.local/share/mise/installs/python/3.12.7/lib/python3.12/selectors.py:558(select)
+       20    0.000    0.000    0.000    0.000 {built-in method _thread.start_new_thread}
+   130/10    0.000    0.000    0.001    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/sqlalchemy/sql/cache_key.py:221(_gen_cache_key)
+      160    0.000    0.000    0.002    0.000 /Users/abhijeetpal/Desktop/workspace/Tasks/Advanced/parallel-expense-tracker/.venv/lib/python3.12/site-packages/anyio/_backends/_asyncio.py:2533(run_sync_in_worker_thread)
+       70    0.000    0.000    0.000    0.000 {method 'send' of '_socket.socket' objects}
+
+
+

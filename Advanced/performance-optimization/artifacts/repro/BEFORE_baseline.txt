@@ -1,0 +1,11 @@
+# A6 BEFORE — naive ORM baseline vs optimized (function-level)
+# Generated: 2026-06-21  |  Python 3.12.7  |  macOS arm64  |  SQLite temp file
+# Command: python bench_summary.py --compare-before
+
+env: python=3.12.7  N=50000  iters=15  db=sqlite(temp)
+correctness (slow == fast): count=50000  total=12550000.00
+
+BEFORE (naive ORM .all() + Python sum)  p50 = 328.71 ms  (min 320.51, mean 331.46, max 348.54)
+AFTER  (SQL GROUP BY over amount_cents)  p50 = 28.89 ms  (min 28.25, mean 28.82, max 29.30)
+
+improvement: 91.2%   speedup: 11.4x   (N=50000)

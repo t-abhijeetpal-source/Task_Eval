@@ -1,0 +1,82 @@
+name: A6 Performance Optimization
+
+# Validates the A6 performance-optimization deliverable at the REPO ROOT
+# (GitHub only runs workflows under the repository-root .github/workflows).
+# Mirrors `make a6-verify`:
+#   validate -> structural + stale-claim checks (scripts/validate_a6_deliverable.sh)
+#   bench    -> install A2 deps, run the live benchmark + perf gate on Python 3.12
+# Path-filtered so it only runs when A6, the A2 app, or this workflow changes.
+on:
+  push:
+    paths:
+      - "Advanced/performance-optimization/**"
+      - "Advanced/parallel-expense-tracker/app/**"
+      - "Advanced/parallel-expense-tracker/scripts/perf_guard.py"
+      - ".github/workflows/a6-performance-optimization.yml"
+  pull_request:
+    paths:
+      - "Advanced/performance-optimization/**"
+      - "Advanced/parallel-expense-tracker/app/**"
+      - "Advanced/parallel-expense-tracker/scripts/perf_guard.py"
+      - ".github/workflows/a6-performance-optimization.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: a6-performance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-bench:
+    name: validate + bench (Python 3.12)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: "Advanced/parallel-expense-tracker/requirements-dev.txt"
+
+      - name: Structural + stale-claim validation
+        run: bash Advanced/performance-optimization/scripts/validate_a6_deliverable.sh
+
+      - name: Install A2 dependencies
+        working-directory: "Advanced/parallel-expense-tracker"
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Behavior preserved (pytest)
+        working-directory: "Advanced/parallel-expense-tracker"
+        run: |
+          . .venv/bin/activate
+          python -m pytest -q
+
+      - name: Benchmark + compare-before (slow vs fast)
+        working-directory: "Advanced/parallel-expense-tracker"
+        run: |
+          . .venv/bin/activate
+          python ../performance-optimization/bench_summary.py --compare-before
+
+      - name: Performance regression gate (p50 GET /api/summary)
+        working-directory: "Advanced/parallel-expense-tracker"
+        run: |
+          . .venv/bin/activate
+          python scripts/perf_guard.py
+
+      - name: Summary
+        if: success()
+        run: |
+          {
+            echo "### ✅ A6 performance optimization — validated"
+            echo "- deliverable structure + stale-claim scan: passed"
+            echo "- pytest (behavior preserved): passed"
+            echo "- compare-before: naive ORM vs SQL GROUP BY (>80% improvement)"
+            echo "- perf gate: p50 GET /api/summary within ceiling"
+          } >> "$GITHUB_STEP_SUMMARY"
