@@ -1,12 +1,15 @@
-# I6 — Bug Diagnosis Report
+# Bug Diagnosis Report — `Intermediate/bug-diagnosis`
 
-> Status: **REPRODUCED → ROOT-CAUSED → FIXED → VERIFIED.**
+> Status: **REPRODUCED → ROOT-CAUSED → FIXED → VERIFIED → HARDENED.**
 > Bug type: off-by-one boundary error in the bulk-discount rule.
-> Environment: Python 3.14.6 · FastAPI · pytest 8.4.2 (run via the shared I4 venv; no install — host disk full).
+> Environment: Python 3.14.6 · FastAPI · pytest 8.4.2 (fresh local `.venv` in
+> `Intermediate/bug-diagnosis`, `pip install -r requirements.txt`).
 
 > **Transparency note:** no pre-existing buggy repo was provided, so a realistic bug was *seeded*
-> into a small layered orders service (per the I6 "seeded bug" framing). The workflow below was
-> then performed as a genuine diagnosis — the failing/passing test outputs are real.
+> into a small layered orders service (per the "seeded bug" framing). The workflow below was
+> then performed as a genuine diagnosis — the failing/passing test outputs are real. After the
+> seeded fix, the service was hardened to production grade (see "Production Hardening" below);
+> every hardening change is backed by reproduced before/after evidence.
 
 ---
 
@@ -27,10 +30,10 @@ Observed: an order line with **exactly `qty = 10`** is charged full price (no di
 ## Reproduction Steps
 
 ```bash
-cd I6
-# (uses the shared I4 venv since the host disk is full; otherwise: pip install -r requirements.txt)
-PY=/Users/abhijeetpal/Desktop/workspace/Tasks/polyglot-currency-pair/fastapi-service/.venv/bin/python
-$PY -m pytest -v
+cd Intermediate/bug-diagnosis
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pytest -v
 ```
 
 **Actual result (before fix) — 3 failed, 2 passed:**
@@ -96,10 +99,12 @@ a boundary-only failure — only the comparison operator does.
 
 | File | Changed? | Why |
 |---|---|---|
-| `app/services.py` | ✅ yes | the defect: discount boundary operator |
-| `app/routes.py` | no | correct; only routes to the service |
-| `app/schemas.py` | no | validation correct |
-| `tests/test_orders.py` | no (already encodes the spec) | the boundary test reproduces the bug |
+| `app/services.py` | ✅ yes | the seeded defect (boundary operator) **and** hardening A (Decimal money math) |
+| `app/storage.py` | ✅ yes (hardening) | hardening B: lock-guard the non-atomic id allocation; +`count()` accessor (D) |
+| `app/schemas.py` | ✅ yes (hardening) | hardening C: `max_length` payload-size (DoS) guard |
+| `app/routes.py` | ✅ yes (hardening) | hardening D: structured request logging |
+| `app/main.py` | ✅ yes (hardening) | hardening D: logging configuration |
+| `tests/test_orders.py` | ✅ yes | boundary test reproduces the bug; +6 regression tests lock in the hardening |
 
 ---
 
@@ -126,28 +131,34 @@ all previously-correct cases (`qty <= 9`, `qty >= 11`) are unaffected.
 ## Verification Results
 
 ```bash
-PY=/Users/abhijeetpal/Desktop/workspace/Tasks/polyglot-currency-pair/fastapi-service/.venv/bin/python
-$PY -m py_compile app/*.py     # build/compile check
-$PY -m pytest -v               # tests
+python -m py_compile app/*.py     # build/compile check
+python -m pytest -v               # tests
 ```
 
 **Compile:** `py_compile: OK (no syntax errors)`.
 
-**Tests (after fix) — 5 passed, 0 failed:**
+**Tests (after fix + hardening) — 11 passed, 0 failed:**
 ```
 tests/test_orders.py::test_no_discount_below_threshold           PASSED
 tests/test_orders.py::test_bulk_discount_applies_at_threshold_of_10  PASSED
 tests/test_orders.py::test_discount_above_threshold              PASSED
 tests/test_orders.py::test_mixed_order_total                     PASSED
 tests/test_orders.py::test_api_order_total_at_threshold          PASSED
-========================= 5 passed in 0.27s =========================
+tests/test_orders.py::test_money_uses_decimal_not_float_round    PASSED
+tests/test_orders.py::test_discounted_line_has_no_float_noise    PASSED
+tests/test_orders.py::test_concurrent_add_allocates_unique_ids   PASSED
+tests/test_orders.py::test_oversized_order_rejected              PASSED
+tests/test_orders.py::test_max_size_order_accepted               PASSED
+tests/test_orders.py::test_routes_emit_logs                      PASSED
+======================== 11 passed in 0.26s =========================
 ```
 
 | Check | Command | Result |
 |---|---|---|
 | Reproduction (before) | `pytest -v` | 3 failed, 2 passed |
 | Compile (after) | `py_compile app/*.py` | OK |
-| Tests (after) | `pytest -v` | **5 passed, 0 failed** |
+| Tests (after fix only) | `pytest -v` | 5 passed, 0 failed |
+| Tests (after hardening) | `pytest -v` | **11 passed, 0 failed** |
 
 ---
 
@@ -170,6 +181,77 @@ The change is one line. To revert:
 ```
 Or, if committed: `git revert <sha>` (single-line commit) / `git checkout -- app/services.py`.
 No data migration or state cleanup is involved (stateless calculation).
+
+---
+
+# Production Hardening (post-fix)
+
+The seeded boundary bug is one billing defect; production review of the same service surfaced
+three more gaps. Each was **reproduced with real output before changing code**, fixed with a
+minimal, layer-local change, and locked in with a regression test. No unrelated refactor was added.
+
+### A. Monetary arithmetic used binary `float` → bill drift
+
+- **Layer:** `app/services.py`. **Same concern as the seeded bug:** correct billing of real money.
+- **Before (reproduced):**
+  ```
+  calculate_total([Item(price=2.675, qty=1)]) -> 2.67      # float round() lottery; correct = 2.68
+  calculate_line_total(Item(price=0.07, qty=10)) -> 0.6300000000000001
+  ```
+  Root cause: line totals were computed in binary `float` and the order total used `round()`,
+  whose result depends on float representation (`round(2.675, 2) == 2.67`).
+- **Fix:** compute with `Decimal` (price converted via `str` to avoid float noise), round once at
+  the order level with `ROUND_HALF_UP` (standard customer-facing billing). SPEC rule 4's
+  "round once at the end" is preserved; the public return type stays `float`.
+- **After:** `2.68` / `0.63`; verified end-to-end via `GET /orders/{id}/total` → `{'total': 2.68}`.
+
+### B. Non-atomic order-id allocation → lost/duplicate orders under concurrency
+
+- **Layer:** `app/storage.py`.
+- **Before (reproduced):** `OrderStore.add()` did a read-modify-write of `_next_id` plus a dict
+  insert with no lock. FastAPI runs sync handlers in a threadpool, so `add()` is concurrent.
+  Widening the read-modify-write window (what a scheduler switch / free-threaded CPython 3.14
+  exposes) collided **34 of 50** orders onto duplicate ids — silently overwriting orders:
+  ```
+  attempted: 50 | unique ids: 16 | stored: 16 | COLLISIONS: 34 dup ids, 34 lost orders
+  ```
+- **Fix:** guard `add`/`get`/`clear` with a `threading.Lock`.
+- **After:** 500-thread stress allocates 500 unique ids, 0 lost orders (`test_concurrent_add_allocates_unique_ids`).
+
+### C. Unbounded request payload → memory-exhaustion (DoS) vector
+
+- **Layer:** `app/schemas.py`.
+- **Before (reproduced):** `OrderCreate` had `min_length=1` but no upper bound; a 500,000-item
+  order was accepted and stored in memory.
+- **Fix:** `max_length=MAX_ITEMS_PER_ORDER` (1000) on `items` — FastAPI returns `422` automatically.
+- **After:** `POST /orders` with 1001 items → `HTTP 422`; 1000 items still accepted (`201`).
+
+### D. No observability + tests reached into store internals
+
+- **Layer:** `app/routes.py` + `app/main.py` (logging); `app/storage.py` (encapsulation).
+- **Before:** endpoints emitted nothing — a production order service had no audit/debug trail; and
+  the concurrency test asserted on `store._orders` (private internals).
+- **Fix:** structured `INFO`/`WARNING` logs on create / total-computed / missing-order (logger
+  `orders.api`, configured in `main.py`); added `OrderStore.count()` so callers never touch internals.
+- **After (live output):**
+  ```
+  2026-06-21 INFO    orders.api order created id=1 line_items=1
+  2026-06-21 INFO    orders.api order total computed id=1 total=900.0
+  2026-06-21 WARNING orders.api order total requested for missing id=999999
+  ```
+  Verified by `test_routes_emit_logs`; the stress test now asserts `store.count() == n`.
+
+| Gap | File | Before | After | Test |
+|---|---|---|---|---|
+| A money drift | `services.py` | `2.675→2.67` | `2.68` (Decimal/half-up) | `test_money_uses_decimal_not_float_round`, `test_discounted_line_has_no_float_noise` |
+| B id race | `storage.py` | 34/50 lost | 0 lost / 500 unique | `test_concurrent_add_allocates_unique_ids` |
+| C DoS payload | `schemas.py` | 500k accepted | 422 over 1000 | `test_oversized_order_rejected`, `test_max_size_order_accepted` |
+| D observability + encapsulation | `routes.py`/`main.py`/`storage.py` | silent; tests touched `_orders` | structured logs; `count()` accessor | `test_routes_emit_logs` |
+
+**Risk of hardening: Low.** Each change is layer-local and backward-compatible: SPEC worked
+examples and the boundary fix are unchanged (all 5 original tests still pass); the API contract
+(`OrderTotal.total: float`) is unchanged; the only new rejection is for orders far larger than any
+realistic order.
 
 ---
 
@@ -201,4 +283,5 @@ No data migration or state cleanup is involved (stateless calculation).
 - [x] Verification output captured (compile + 5 passed)
 - [x] Risk assessment included (Low)
 - [x] Rollback plan included
-- [x] I6_bug_diagnosis.md generated
+- [x] Diagnosis report generated (this file)
+- [x] Production hardening: 4 gaps reproduced/closed, fixed minimally, and regression-tested (11 passed)
