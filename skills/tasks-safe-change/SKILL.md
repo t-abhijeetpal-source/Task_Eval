@@ -4,7 +4,7 @@ description: >-
   Makes a small, focused, minimal-risk change with proof via tests. Use when the user asks for safe bug fix, minimal diff, surgical change, or I3-style work.
 ---
 
-# Safe Change Agent
+# I3 — Small Safe Change Agent (Language-Agnostic)
 
 > A reusable agent specification for making a **small, focused, minimal-risk change** in an
 > unfamiliar repository — bug fix, null handling, validation, tiny refactor, or logging — with a
@@ -139,7 +139,8 @@ NOT FOUND IN REPOSITORY
 
 - **Reproduce before you fix.** A failing test (or repro command) first; a fix without a repro is a guess.
 - **Bound the blast radius with a callers search.** Grep for usages of the symbol you're changing
-  *before* editing — this tells you what to re-run and what could break.
+  *before* editing — this tells you what to re-run and what could break. This repo ships
+  `scripts/caller_search.sh <symbol> <root>` (ripgrep-based) for exactly this.
 - **Smallest diff that fully fixes it.** Resist refactoring around the bug; note larger cleanups as
   follow-ups rather than doing them here.
 - **Run the narrowest test target first** (one file/test), then the module suite — fast feedback,
@@ -163,6 +164,20 @@ Show:
 - **Agent vs Verified** — what was executed vs what was generated.
 
 ---
+
+## Reference implementation in this repo
+
+This agent spec is exercised end-to-end by a self-contained Python sandbox so an
+evaluator can reproduce the full workflow from a clone alone — no external repo needed:
+
+- **`sandbox/`** — a minimal module with a *seeded* date-parser bug that mirrors the
+  Flutter case (lenient `DD-MM-YYYY` mis-parsing `YYYY-MM-DD HH:mm`). Run `make i3-verify`
+  from the repo root, or `pytest -v` + `ruff check .` inside `sandbox/`.
+- **`RUBRIC.md`** — the AI-judge weighted scoring rubric (diff size, before/after proof,
+  risk, rollback, agent-vs-verified) used to grade an I3 submission.
+- **`scripts/caller_search.sh`** — the callers-search helper referenced above.
+- **`docs/agent-analysis/I3_safe_change.md`** — the worked artifact (Flutter case as the
+  extended example, Python sandbox as the primary in-repo proof).
 
 ## Notes on Repo Types (reference)
 

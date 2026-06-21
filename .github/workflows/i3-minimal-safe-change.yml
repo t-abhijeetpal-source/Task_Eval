@@ -1,0 +1,89 @@
+name: I3 Minimal Safe Change CI
+
+# Verifies the self-contained I3 safe-change sandbox: install -> pytest -> ruff,
+# plus the spec single-source-of-truth guard. Path-filtered so it only runs when
+# the module (or this workflow) changes.
+on:
+  push:
+    paths:
+      - "Intermediate/minimal-safe-change/**"
+      - "skills/tasks-safe-change/**"
+      - ".github/workflows/i3-minimal-safe-change.yml"
+  pull_request:
+    paths:
+      - "Intermediate/minimal-safe-change/**"
+      - "skills/tasks-safe-change/**"
+      - ".github/workflows/i3-minimal-safe-change.yml"
+  workflow_dispatch:
+
+# Cancel superseded runs on the same ref to save CI minutes.
+concurrency:
+  group: i3-minimal-safe-change-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  i3-minimal-safe-change:
+    name: i3-minimal-safe-change
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: "Intermediate/minimal-safe-change/sandbox/requirements.txt"
+
+      - name: Install dependencies (pytest + ruff)
+        working-directory: "Intermediate/minimal-safe-change/sandbox"
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip
+          pip install -r requirements.txt ruff
+
+      - name: Run tests (pytest)
+        working-directory: "Intermediate/minimal-safe-change/sandbox"
+        run: |
+          . .venv/bin/activate
+          python -m pytest -v --junitxml=test-results.xml
+
+      - name: Lint (ruff)
+        working-directory: "Intermediate/minimal-safe-change/sandbox"
+        run: |
+          . .venv/bin/activate
+          ruff check .
+
+      - name: Agent-spec sync guard (SKILL.md == I3_agent.md)
+        run: bash Intermediate/minimal-safe-change/scripts/check-i3-sync.sh
+
+      # Keep failing test output for triage even when the job fails.
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i3-test-results
+          path: "Intermediate/minimal-safe-change/sandbox/test-results.xml"
+          retention-days: 7
+
+      - name: Summary
+        if: success()
+        run: |
+          {
+            echo "### ✅ i3-minimal-safe-change passed"
+            echo "- Tests: pytest (Python ${{ matrix.python-version }})"
+            echo "- Lint: ruff check ."
+            echo "- Spec sync: SKILL.md body == I3_agent.md (canonical)"
+            echo "- Proof: seeded YYYY-MM-DD parse bug reproduced & fixed (\`1755488700\`)"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Failure summary
+        if: failure()
+        run: |
+          {
+            echo "### ❌ i3-minimal-safe-change failed"
+            echo "See the failing step above and the uploaded test-results artifact."
+          } >> "$GITHUB_STEP_SUMMARY"

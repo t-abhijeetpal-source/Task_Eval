@@ -24,3 +24,11 @@ run = "make bootstrap"
 [tasks.verify]
 description = "Run the full test suite."
 run = "make test"
+
+[tasks.i3-verify]
+description = "Verify the I3 self-contained safe-change sandbox (pytest + ruff + sync guard)."
+run = "make i3-verify"
+
+[tasks.i3-flutter-verify]
+description = "Optional extended I3 proof; skips cleanly when the Flutter SDK is absent."
+run = "make i3-flutter-verify"

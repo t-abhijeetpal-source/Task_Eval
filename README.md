@@ -128,7 +128,7 @@ flowchart LR
 |---|---|---|
 | `er-diagram` | Data model + Mermaid ER from source, reconciled | 27 tables; no-FK cache pattern |
 | `flow-tracer` | UI→VM→UseCase→Repo→DB trace with DI resolution | recent-search flow, file:line cited |
-| `minimal-safe-change` | Smallest safe change + before/after tests + rollback | pml-flutter date parser, `flutter test` **40/40** |
+| `minimal-safe-change` | Smallest safe change + before/after tests + rollback | in-repo Python sandbox: `pytest` **2 failed → fix → 5 passed** + ruff (`make i3-verify`); pml-flutter `flutter test` 40/40 as extended example |
 | `polyglot-currency-pair` | FastAPI service + Node client on one contract | pytest **7** + jest **9** + live integration |
 | `dockerize-service` | Slim, non-root, health-checked image | container **Up (healthy)**, 55 MB |
 | `bug-diagnosis` | Reproduce → root-cause → fix → verify | **3 failed → fix → 5 passed** |

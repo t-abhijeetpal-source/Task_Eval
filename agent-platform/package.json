@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "ingest": "node scripts/ingest.mjs",
+    "test:ingest": "node scripts/test-i3-content.mjs"
   },
   "dependencies": {
     "clsx": "^2.1.1",

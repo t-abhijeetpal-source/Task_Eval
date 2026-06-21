@@ -1,0 +1,45 @@
+{
+  "task": "I3",
+  "title": "Minimal safe change — date-string parser fix",
+  "sandbox": {
+    "primary": true,
+    "language": "python",
+    "python_version": "3.12.7",
+    "files_changed": [
+      "sandbox/app/datetime_utils.py"
+    ],
+    "test_files": [
+      "sandbox/tests/test_datetime_utils.py"
+    ],
+    "fix_description": "Add a regex guard (^\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}) that routes space-separated YYYY-MM-DD HH:mm input to the strict ISO formatter before the lenient DD-MM-YYYY parser (which mis-reads the year as the day and returns a garbage negative timestamp). Also removes the now-dead nested try/except. DD-MM-YYYY and ISO-8601 'T' paths are preserved.",
+    "patch": "artifacts/i3-sandbox-fix.patch",
+    "canonical_example": {
+      "input": "2025-08-18 09:15",
+      "timezone": "IST (UTC+5:30)",
+      "expected_timestamp": 1755488700,
+      "buggy_timestamp": -61405935300
+    },
+    "verification": {
+      "command_before": "pytest -v  (buggy code)",
+      "result_before": "2 failed, 3 passed",
+      "command_after": "pytest -v  (fixed code)",
+      "result_after": "5 passed in 0.01s",
+      "lint": "ruff check . -> All checks passed!"
+    }
+  },
+  "flutter_extended": {
+    "primary": false,
+    "note": "Optional extended example. The pml-flutter monorepo is NOT vendored into this repo, so pml-flutter-date-fix.patch is a documented reference fragment and is NOT git-apply-able here.",
+    "repo": "android-monorepo/flutter/pml-flutter",
+    "branch": "fix/i3-date-string-yyyy-mm-dd-parse",
+    "base_commit": "NOT FOUND IN REPOSITORY",
+    "fix_commit": "NOT FOUND IN REPOSITORY",
+    "verified_at": "NOT FOUND IN REPOSITORY",
+    "files_changed": [
+      "lib/core/utils/datetime_utils_internal.dart",
+      "test/core/utils/date_time_utils_test.dart",
+      "test/core/utils/datetime_utils_internal_test.dart"
+    ],
+    "reference_patch": "artifacts/pml-flutter-date-fix.patch"
+  }
+}

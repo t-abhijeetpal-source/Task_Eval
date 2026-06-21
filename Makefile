@@ -18,7 +18,10 @@ PY_PROJECTS   := "Basics/fastapi-transaction-service" "Intermediate/bug-diagnosi
 NODE_PROJECTS := "Basics/node-transaction-service" "Intermediate/polyglot-currency-pair/node-client" "Advanced/polyglot-fraud-system/node-worker"
 RUST_PROJECTS := "Basics/rust-logcount-cli" "Advanced/polyglot-fraud-system/rust-engine"
 
-.PHONY: help bootstrap doctor setup-env verify test rust node python a3-integration clean
+# Self-contained I3 "smallest safe change" sandbox (seeded date-parser bug + proof).
+I3_SANDBOX := "Intermediate/minimal-safe-change/sandbox"
+
+.PHONY: help bootstrap doctor setup-env verify test rust node python i3-verify i3-flutter-verify a3-integration clean
 
 help:  ## Show available targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) \
@@ -56,8 +59,24 @@ python:  ## Create venv + install + test all Python services
 			&& pip -q install -r requirements.txt && python -m pytest -q ) || exit 1; done
 
 verify: test  ## Alias for the full test suite
-test: rust node python  ## Run every test suite (Rust + Node + Python)
+test: rust node python i3-verify  ## Run every test suite (Rust + Node + Python + I3 sandbox)
 	@echo "== ALL SUITES PASSED =="
+
+# ---- I3 — smallest safe change (self-contained sandbox) ------------------------
+i3-verify:  ## Verify the I3 safe-change sandbox (pytest + ruff + spec-sync guard)
+	@echo "== i3: $(I3_SANDBOX) =="
+	@( cd $(I3_SANDBOX) && $(RUN) python -m venv .venv && . .venv/bin/activate \
+		&& pip -q install -r requirements.txt ruff \
+		&& python -m pytest -v && ruff check . ) || exit 1
+	@bash "Intermediate/minimal-safe-change/scripts/check-i3-sync.sh"
+
+i3-flutter-verify:  ## (Optional) Run the extended Flutter proof; skips cleanly if flutter is absent
+	@if command -v flutter >/dev/null 2>&1; then \
+		echo "== i3 flutter (extended) =="; \
+		echo "See Intermediate/minimal-safe-change/docs/agent-analysis/I3_safe_change.md for the pml-flutter steps."; \
+	else \
+		echo "== i3 flutter (extended): SKIPPED — flutter SDK not found (optional, not required for bootstrap) =="; \
+	fi
 
 a3-integration:  ## Run the A3 polyglot end-to-end integration test
 	@bash "Advanced/polyglot-fraud-system/integration-tests/run_integration.sh"

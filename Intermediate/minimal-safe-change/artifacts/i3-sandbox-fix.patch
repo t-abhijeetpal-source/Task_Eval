@@ -1,0 +1,28 @@
+diff --git a/app/datetime_utils.py b/app/datetime_utils.py
+index e0738bc..e276e30 100644
+--- a/app/datetime_utils.py
++++ b/app/datetime_utils.py
+@@ -64,15 +64,14 @@ def date_string_to_timestamp(date_string: str) -> int:
+     Supported formats: ``DD-MM-YYYY HH:mm``, ``YYYY-MM-DD HH:mm`` (space), and
+     ISO-8601 with a ``T`` separator.
+     """
++    # Route space-separated YYYY-MM-DD HH:mm to the strict ISO formatter first.
++    # The lenient DD-MM-YYYY parser below also matches this shape and mis-reads the
++    # year as the day, so it must be intercepted before that attempt.
++    if re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}", date_string):
++        return _parse_iso_space(date_string)
+     try:
+-        # Lenient DD-MM-YYYY first. BUG: this also matches YYYY-MM-DD HH:mm and
+-        # mis-parses it (year read as day) before the ISO fallback can run.
++        # Lenient DD-MM-YYYY (e.g. 18-08-2025 09:15).
+         return _parse_lenient_dmy(date_string)
+     except ValueError:
+-        try:
+-            # YYYY-MM-DD fallback — unreachable for the ISO bug case because the
+-            # lenient parse above never raises on it.
+-            return _parse_iso_space(date_string)
+-        except ValueError:
+-            # ISO-8601 with a 'T' separator.
+-            return _parse_iso_t(date_string)
++        # ISO-8601 with a 'T' separator (e.g. 2025-08-18T09:15:00).
++        return _parse_iso_t(date_string)

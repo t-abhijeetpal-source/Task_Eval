@@ -1,0 +1,39 @@
+# REFERENCE FRAGMENT — NOT git-apply-able in this repo.
+#
+# The pml-flutter monorepo (android-monorepo/flutter/pml-flutter) is intentionally
+# NOT vendored into Task_Eval, so there is no file here for this diff to apply to.
+# This is the documented Dart fix that the Python sandbox mirrors; the runnable,
+# git-apply-able proof is artifacts/i3-sandbox-fix.patch.
+#
+# Repo:        android-monorepo/flutter/pml-flutter
+# Branch:      fix/i3-date-string-yyyy-mm-dd-parse
+# Base commit: NOT FOUND IN REPOSITORY
+# Fix commit:  NOT FOUND IN REPOSITORY
+#
+# --- lib/core/utils/datetime_utils_internal.dart ---
+ int dtuDateStringToTimestamp(String dateString) {
+   try {
++    // Try yyyy-MM-dd first — dd-MM-yyyy DateFormat is lenient and mis-parses ISO dates.
++    if (RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}').hasMatch(dateString)) {
++      final DateFormat formatter2 = DateFormat('yyyy-MM-dd HH:mm');
++      final DateTime parsedDate = formatter2.parse(dateString);
++      return parsedDate.millisecondsSinceEpoch ~/ 1000;
++    }
+     try {
+       final DateFormat formatter1 = DateFormat('dd-MM-yyyy HH:mm');
+       final DateTime parsedDate = formatter1.parse(dateString);
+       return parsedDate.millisecondsSinceEpoch ~/ 1000;
+     } catch (e1) {
+-      try {
+-        final DateFormat formatter2 = DateFormat('yyyy-MM-dd HH:mm');
+-        final DateTime parsedDate = formatter2.parse(dateString);
+-        return parsedDate.millisecondsSinceEpoch ~/ 1000;
+-      } catch (e2) {
+-        final DateTime parsedDate = DateTime.parse(dateString);
+-        return parsedDate.millisecondsSinceEpoch ~/ 1000;
+-      }
++      final DateTime parsedDate = DateTime.parse(dateString);
++      return parsedDate.millisecondsSinceEpoch ~/ 1000;
+     }
+   }
+ }

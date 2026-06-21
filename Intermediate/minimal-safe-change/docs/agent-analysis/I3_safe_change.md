@@ -1,8 +1,25 @@
-# I3 — Small Safe Change (pml-flutter)
+# I3 — Small Safe Change (Date-String Parser)
 
-> Repository: `android-monorepo/flutter/pml-flutter`
-> Branch: `fix/i3-date-string-yyyy-mm-dd-parse`
-> Status: **IMPLEMENTED AND TEST-VERIFIED**
+This artifact documents one minimal, fully-verified date-parser fix in **two forms**:
+
+- **Primary (in-repo, runnable):** the Python sandbox at `../../sandbox/` — reproducible
+  by an evaluator from a clone alone (`make i3-verify`).
+- **Extended (optional):** the original Dart fix on `android-monorepo/flutter/pml-flutter`,
+  preserved below as a real-world example. That repo is **not vendored** here.
+
+## Metadata
+
+| Field | Sandbox (primary) | Flutter (extended) |
+|---|---|---|
+| Repository | `Task_Eval` / `Intermediate/minimal-safe-change/sandbox` | `android-monorepo/flutter/pml-flutter` |
+| Branch | n/a (committed fixed; buggy state via `artifacts/i3-sandbox-fix.patch`) | `fix/i3-date-string-yyyy-mm-dd-parse` |
+| Base commit | n/a (in-repo) | `NOT FOUND IN REPOSITORY` |
+| Fix commit | n/a (in-repo) | `NOT FOUND IN REPOSITORY` |
+| Verified at | 2026-06-21 · Python 3.12.7 · pytest 8.4.2 · ruff | `NOT FOUND IN REPOSITORY` |
+| Status | **REPRODUCED → FIXED → VERIFIED** (5/5 tests, ruff clean) | **IMPLEMENTED AND TEST-VERIFIED** (40/40, per prior run) |
+
+> The Python sandbox reproduces the **exact** garbage value (`-61405935300`) documented
+> for the Flutter defect, confirming it is a faithful mirror.
 
 ---
 
@@ -139,3 +156,57 @@ No database or persisted state changes — pure in-memory parsing logic.
 - Post-fix: `flutter test test/core/utils/datetime_utils_internal_test.dart test/core/utils/date_time_utils_test.dart` → **40/40 passed**.
 - `flutter analyze lib/core/utils/datetime_utils_internal.dart` → **No issues found**.
 - Caller search via grep confirmed ~15 usages of `dateStringToTimestamp`; no signature changes.
+
+> **Sections 1–8 above describe the extended Flutter example.** The primary, in-repo
+> Python sandbox carries the same workflow with *executed-this-clone* evidence in
+> [`../../VERIFICATION_RESULTS.md`](../../VERIFICATION_RESULTS.md) and the git-apply-able
+> diff in [`../../artifacts/i3-sandbox-fix.patch`](../../artifacts/i3-sandbox-fix.patch).
+
+---
+
+## 9. Business Impact
+
+`date_string_to_timestamp` feeds **chart x-axes and time-series alignment** for market
+data. The defect mis-parsed `YYYY-MM-DD HH:mm` timestamps into a garbage **negative**
+value (~year 23 AD), so any code path receiving that format would:
+
+| Severity | Surface | Effect |
+|---|---|---|
+| **Display (high-visibility, low-compliance)** | Live/ATM-PCR charts, price sync | Data points plotted at a nonsensical epoch → blank/compressed charts, broken zoom, misaligned series. Visible but not financially incorrect. |
+| **Compliance (low-visibility, high-stakes)** | Any persisted/exported timestamp derived from this path | A negative Unix second written to a record or audit/export is a *silent* data-integrity fault — far more dangerous than the visible chart glitch because it can pass review unnoticed. |
+
+The fix is therefore **Low risk to ship** (additive guard, no signature change) but closes
+a **disproportionately high-impact** correctness gap — exactly the asymmetry I3 targets.
+
+---
+
+## 10. Cross-language pattern
+
+The same defect class — *a lenient/greedy parser ordered before a stricter one, silently
+"succeeding" on input meant for the stricter path* — reproduces identically across stacks:
+
+| | Primary (Python sandbox) | Extended (Flutter) |
+|---|---|---|
+| Symbol | `date_string_to_timestamp` | `DateTimeUtils.dateStringToTimestamp` |
+| Lenient parser | manual greedy `DD-MM-YYYY` field read | `DateFormat('dd-MM-yyyy HH:mm')` (lenient) |
+| Guard added | `re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}")` | `RegExp(r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}')` |
+| Wrong value | `-61405935300` | `-61405935300` |
+| Correct value | `1755488700` | `1755488700` |
+| Proof | `pytest` 5/5 + `ruff` (this clone) | `flutter test` 40/40 (external repo) |
+
+The guard-then-fallthrough fix is the **minimal** correction in both: it routes the ISO
+shape to the right formatter without touching the working `DD-MM-YYYY` or ISO-`T` paths.
+
+---
+
+## Appendix — Regression Test Matrix
+
+| Format | Input | Expected | Test name | Status |
+|---|---|---|---|---|
+| `YYYY-MM-DD HH:mm` (space) | `2025-08-18 09:15` | `1755488700` | `test_iso_space_format_parses_correctly` | ✅ (was ❌ pre-fix: `-61405935300`) |
+| `DD-MM-YYYY HH:mm` | `18-08-2025 09:15` | `1755488700` | `test_ddmmyyyy_format_still_parses` | ✅ (unchanged by fix) |
+| ISO-8601 `T` | `2025-08-18T09:15:00` | `1755488700` | `test_iso8601_with_t_separator_parses` | ✅ (unchanged by fix) |
+| Invalid | `not-a-date` | `ValueError` | `test_invalid_input_raises_value_error` | ✅ |
+| Sign guard | `2025-08-18 09:15` | `> 0` | `test_iso_space_is_not_negative` | ✅ (was ❌ pre-fix) |
+
+All inputs interpreted as IST (UTC+5:30); see [`../../SPEC.md`](../../SPEC.md).
