@@ -1,0 +1,45 @@
+# A1 evidence — expected reproduction commands + values
+# status: INFERRED (TARGET_REPO not checked out in this environment)
+# Run scripts/capture_evidence.sh with TARGET_REPO set to replace these with LIVE/VERIFIED values.
+# target_commit: unknown   (set at capture time via: git -C "$TARGET_REPO" rev-parse HEAD)
+
+## Files scanned
+# $ find "$T/equity_sdk" "$T/base_app" "$T/common-database" -name '*.kt' | wc -l
+kotlin_equity_src = 4279        # (4279 = equity_sdk 3671 + base_app 522 + common-database 86)
+# $ find "$T/flutter/pml-flutter/lib" -name '*.dart' | wc -l
+dart_pml_flutter  = 2350
+files_scanned_total = 6629
+
+## Modules (settings.gradle)
+# $ grep -c '^[[:space:]]*include' "$T/settings.gradle"
+include_lines = 44
+# $ grep -oE "':[A-Za-z0-9_:.-]+'" "$T/settings.gradle" | sort -u | wc -l
+unique_module_refs = 36
+modules_graph_nodes = 32        # equity_sdk + 24 project() deps + base_app's 7 targets (scoped subgraph)
+
+## Retrofit interfaces (equity_sdk)
+# $ grep -rlE '@(GET|POST|PUT|DELETE)' "$T/equity_sdk/src/main" | wc -l
+retrofit_service_files = 78
+base_app_interface_files = 1    # BaseService.kt
+# $ grep -rohE '@Url' "$T/equity_sdk/src/main" | wc -l
+url_dynamic = 374
+static_literal_paths = 5
+endpoint_methods_estimate = 363 # INFERRED (annotation-derived, incl. dynamic @Url)
+
+## Room model
+# $ grep -rn '@ForeignKey' "$T/common-database/src" "$T/api_failure_logging/src" | wc -l
+foreign_keys = 0
+room_databases = 2
+room_tables_total = 27          # EquityDatabase v19 = 24 ; LoggingDataBase v7 = 3
+
+## Tests
+# $ find "$T" -name '*Test.kt' | wc -l
+kotlin_Test_kt_repo_wide = 1684
+tests_kotlin_equity = 520
+# $ find "$T/flutter/pml-flutter" -name '*_test.dart' | wc -l
+dart_test = 212
+
+## CI test scope
+# $ grep -n 'UnitTest' "$T/bitbucket-pipelines.yml"
+# bitbucket-pipelines.yml:713 ./gradlew -Pci :base_app:testProductionDebugUnitTest   (:base_app ONLY)
+# .gitlab-ci.yml:118 ...testDevelopmentDebugUnitTest   (generic task; module scope UNVERIFIED)

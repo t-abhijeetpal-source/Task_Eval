@@ -3,7 +3,7 @@
 > Coordinator-run cross-check of the 6 independent specialist reports. The agents did not read each
 > other's output, so agreements are genuine independent corroboration. Every resolution below was
 > re-checked against source by the coordinator. Date: 2026-06-17.
-> Target: `/Users/abhijeetpal/Desktop/workspace/android-monorepo` (equity vertical).
+> Target: `$TARGET_REPO (android-monorepo)` (equity vertical).
 
 ---
 

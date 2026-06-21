@@ -3,7 +3,7 @@
 > Role: Principal Software Architect & Multi-Agent Coordinator.
 > Objective: demonstrate **effective parallel agent orchestration** — decompose, fan out 6
 > independent specialist agents, cross-verify, resolve conflicts, consolidate.
-> Target repo: `/Users/abhijeetpal/Desktop/workspace/android-monorepo` (Paytm Money codebase:
+> Target repo: `$TARGET_REPO (android-monorepo)` (Paytm Money codebase:
 > Kotlin equity SDK + Room DB + Flutter app). Date: 2026-06-17.
 
 ---

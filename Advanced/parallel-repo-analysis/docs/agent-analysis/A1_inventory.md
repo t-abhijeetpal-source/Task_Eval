@@ -1,7 +1,7 @@
 # A1 — Repository / Artifact Inventory
 
 **Agent:** A1 (Repository Inventory)
-**Target:** `/Users/abhijeetpal/Desktop/workspace/android-monorepo`
+**Target:** `$TARGET_REPO (android-monorepo)`
 **Date:** 2026-06-17
 **Method:** Read `settings.gradle` + module `build.gradle` files; glob/grep on naming conventions. Equity vertical (`common-database/`, `equity_sdk/`, `base_app/`, `flutter/pml-flutter/`) read deeply; other modules counted only.
 
@@ -194,3 +194,35 @@ Only 2 true `Worker`/`RxWorker` subclasses found across equity_sdk + base_app + 
 | Application entry points | 1 (`BaseApplication`) | base_app | VERIFIED |
 
 **Notes / caveats:** Counts use filename conventions (glob/grep), so a file may belong to >1 logical category, and abstract base classes are included. Repository "interface" count (86) exceeds "impl" (65) because `*Repo.kt` glob also catches some non-pure-interface helpers; treat as upper bound. Out-of-scope modules counted by source-file totals only, not artifact-classified (per scope rules).
+
+---
+
+## Agent vs Verified (cross-verification footer)
+
+> Added in remediation (AUDIT-026). This lane was produced by **Agent 1 (Inventory)** working independently
+> (no cross-reading). The coordinator's checks live in `A1_verification_report.md`; the
+> consolidated reconciliation is in `A1_repository_master_report.md` § *Agent Findings vs Verified Findings*.
+
+| As reported by Agent 1 (Inventory) | Coordinator-verified | Status |
+|---|---|---|
+| ~40 Gradle modules; equity_sdk 71 Retrofit services, 183 use-cases, 194 VMs, 843 models | `settings.gradle` 44 include lines / **36** unique `:module` refs | RECONCILED |
+| equity_sdk Retrofit count 71 | re-grep → **78** interface files (A1 undercounted) | CORRECTED |
+
+---
+
+## Appendix — Long-tail & severity (depth-cap overflow)
+
+> Per the depth-cap rule, groups were summarized to ~15 items; this appendix records the tail with
+> counts so nothing is silently dropped (AUDIT-027).
+
+| Group | Shown | Tail (counted, not enumerated) | Where |
+|---|---|---|---|
+| Gradle modules | equity vertical + key deps | **+N** out-of-scope modules (36 unique of 44 includes) | `settings.gradle` |
+| Retrofit services | top by feature | tail of **78** equity_sdk interfaces | `equity_sdk/src/main` |
+| Use-cases | sampled iface/impl | ~**183** `*UseCase*.kt` (agent count) | `equity_sdk` |
+| ViewModels | sampled | ~**194** `*ViewModel*.kt` | `equity_sdk` |
+| Models / DTOs | sampled | ~**843** model classes | `equity_sdk` |
+
+**Severity of inventory gaps:** LOW — the tail is counted and reproducible via
+`scripts/capture_evidence.sh`; no inventory item affects a headline metric beyond the counts above.
+Binary-only modules (code only in `build/`) are marked `NOT FOUND IN REPOSITORY`, not inferred.

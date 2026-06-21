@@ -1,0 +1,30 @@
+name: A1 Parallel Repo Analysis
+
+on:
+  push:
+    paths:
+      - 'Advanced/parallel-repo-analysis/**'
+      - '.github/workflows/a1-parallel-repo-analysis.yml'
+  pull_request:
+    paths:
+      - 'Advanced/parallel-repo-analysis/**'
+      - '.github/workflows/a1-parallel-repo-analysis.yml'
+
+jobs:
+  validate-reports:
+    name: Validate A1 deliverables
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate A1 reports (structural + content gate)
+        run: bash Advanced/parallel-repo-analysis/scripts/validate_a1_reports.sh
+
+      - name: Validate via orchestrator (--validate-only)
+        run: bash Advanced/parallel-repo-analysis/run_a1_analysis.sh --validate-only

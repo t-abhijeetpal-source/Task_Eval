@@ -1,6 +1,6 @@
 # A1 — Test Discovery (Agent 4)
 
-**Target:** `/Users/abhijeetpal/Desktop/workspace/android-monorepo`
+**Target:** `$TARGET_REPO (android-monorepo)`
 **Scope:** equity vertical (`common-database`, `equity_sdk`, `base_app`) + `flutter/pml-flutter` (Flutter package)
 **Date:** 2026-06-17 · Confidence tags: VERIFIED (executed: file reads, `find` counts) / INFERRED / UNVERIFIED
 
@@ -138,3 +138,16 @@ More verified example paths:
 5. **Reconcile dual CI.** Decide GitLab vs Bitbucket as canonical; they run different flavors/scopes and only one should gate.
 6. **Update stale docs:** remove/replace the fabricated 78.6% figures (`test-automation-plan.md:520,549`), align aspirational gates with reality, and fix `pml_flutter` → `pml-flutter` paths (`monorepo-flutter-integration.md`).
 7. **Add an instrumented smoke stage** (Espresso/Compose `connectedDebugAndroidTest` on an emulator/Firebase Test Lab) — the SmokeUiTest/SmokeComposeTest scaffolding already exists but never runs.
+
+---
+
+## Agent vs Verified (cross-verification footer)
+
+> Added in remediation (AUDIT-026). This lane was produced by **Agent 4 (Tests)** working independently
+> (no cross-reading). The coordinator's checks live in `A1_verification_report.md`; the
+> consolidated reconciliation is in `A1_repository_master_report.md` § *Agent Findings vs Verified Findings*.
+
+| As reported by Agent 4 (Tests) | Coordinator-verified | Status |
+|---|---|---|
+| frameworks + canonical CI cmd + 1,684 `*Test.kt` + CI-runs-`:base_app`-only defect | `bitbucket-pipelines.yml:713` = `:base_app` only | VERIFIED (Bitbucket) |
+| GitLab `testDevelopmentDebugUnitTest` module scope | generic task, not module-restricted | UNVERIFIED (flag) |

@@ -1,7 +1,7 @@
 # A1 — Architecture & Dependency Analysis (Equity Vertical)
 
 **Agent:** A5 — Architecture & Dependency Agent
-**Repo:** `/Users/abhijeetpal/Desktop/workspace/android-monorepo`
+**Repo:** `$TARGET_REPO (android-monorepo)`
 **Scope:** `common-database/`, `equity_sdk/`, `base_app/` (Kotlin); `flutter/pml-flutter/` (high level)
 **Date:** 2026-06-17
 
@@ -17,7 +17,7 @@
 | **MVVM** (ViewModel + observable LiveData/StateFlow) | **VERIFIED** | 212 `*ViewModel*.kt` files. `.../funds/fundsdetails/presentation/EquityFundsDetailsViewModel.kt:22,38,61-62` exposes `MutableLiveData`/`LiveData` getters |
 | **Dagger DI (classic component + module + multibinding ViewModelFactory)** | **VERIFIED** | `@Component` `.../funds/fundsdetails/di/FundsDetailsComponent.kt:13,24`; `@Module @Binds` `.../funds/fundsdetails/di/FundsDetailsModule.kt:13,16`; per-feature `Injector.kt`; root `.../equity/di/EquityBaseComponent.kt`, `EquityBaseModule.kt`, scopes `FeatureScope.kt`/`EquityBaseScope.kt` |
 | **Hilt DI (coexists with classic Dagger)** | **VERIFIED** | `@HiltViewModel`/`@Module`/`@InstallIn`/`@Inject` present in `funds` feature (`grep` hit set incl. `FundsDetailsModule.kt`, `van/di/*`, `van/data/remote/VanDetailsRepoImpl.kt`, `van/domain/usecase/GetVanEligibleUseCase.kt`) |
-| **Room (local persistence layer)** | **VERIFIED** | `common-database/.../equity_database/EquityDatabase.kt:61-67` `@Database(entities=[…25 entities…]) abstract class EquityDatabase : RoomDatabase()`; `RoomModule.kt`; DAOs per feature (`RecentlyViewedDao`, `KycStatusDao`, `EquityConfigDao`, …) |
+| **Room (local persistence layer)** | **VERIFIED** | `common-database/.../equity_database/EquityDatabase.kt:61-67` `@Database(entities=[…24 entities…]) abstract class EquityDatabase : RoomDatabase()`; `RoomModule.kt`; DAOs per feature (`RecentlyViewedDao`, `KycStatusDao`, `EquityConfigDao`, …) |
 | **Retrofit (remote layer)** | **VERIFIED** | `equity_sdk/.../corporateActions/data/CAsService.kt:10-18` (`interface … @GET`); many `*Service.kt` under `*/data/` (CachedScrips, indices, pmlthree, marketmovers, boot, riskdisclosure) |
 | **MVI (single immutable state + intent reducer)** | **UNVERIFIED / NOT DOMINANT** | Predominant state holder is `LiveData`/`MutableLiveData` getters (MVVM), not a single sealed-intent + reduced `State`. No systemic MVI evidence found in sampled features |
 
@@ -186,3 +186,16 @@ graph TD
 - Flutter analysis is intentionally **high level** per scope; depth of native<->Dart contract not audited.
 
 ---
+
+---
+
+## Agent vs Verified (cross-verification footer)
+
+> Added in remediation (AUDIT-026). This lane was produced by **Agent 5 (Architecture)** working independently
+> (no cross-reading). The coordinator's checks live in `A1_verification_report.md`; the
+> consolidated reconciliation is in `A1_repository_master_report.md` § *Agent Findings vs Verified Findings*.
+
+| As reported by Agent 5 (Architecture) | Coordinator-verified | Status |
+|---|---|---|
+| Clean + MVVM + Dagger/Hilt; 32-node module graph; layer violations | `IndexDetailsViewModel.kt:77 val equityDb: EquityDatabase` | VERIFIED |
+| EquityDatabase entity count | **24** (v19 schema) — not 25 | CORRECTED (AUDIT-012) |

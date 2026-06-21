@@ -1,0 +1,56 @@
+{
+  "task": "A1 — Parallel Repository Analysis",
+  "target": "android-monorepo (Paytm Money — Kotlin equity SDK + Room + Flutter client)",
+  "scope": "equity vertical: common-database/, equity_sdk/, base_app/, flutter/pml-flutter/",
+  "commit": "unknown",
+  "commit_note": "Target-repo commit is captured at runtime via `git -C $TARGET_REPO rev-parse HEAD`; not committed here.",
+  "monorepo_commit": "973b512aa2a76081f2dc1e1d05c1a5711ee88c25",
+  "date": "2026-06-17",
+  "produced_date": "2026-06-21",
+  "metrics": {
+    "files_scanned": 6629,
+    "files_scanned_breakdown": {
+      "kotlin_equity_src": 4279,
+      "dart_pml_flutter_lib": 2350
+    },
+    "modules_unique": 36,
+    "modules_include_lines": 44,
+    "modules_graph_nodes": 32,
+    "retrofit_interfaces_equity_sdk": 78,
+    "retrofit_interfaces_base_app": 1,
+    "endpoint_methods_estimate": 363,
+    "endpoint_methods_status": "INFERRED",
+    "room_databases": 2,
+    "room_tables_total": 27,
+    "room_tables_equity_db_v19": 24,
+    "room_tables_logging_db_v7": 3,
+    "foreign_keys": 0,
+    "tests_kotlin_equity": 520,
+    "tests_dart_pml_flutter": 212,
+    "tests_kotlin_repo_wide": 1684,
+    "contradictions_resolved": 2
+  },
+  "lanes": [
+    { "id": 1, "name": "Repository Inventory", "report": "A1_inventory.md", "status": "VERIFIED" },
+    { "id": 2, "name": "API Mapping", "report": "A1_api_map.md", "status": "VERIFIED" },
+    { "id": 3, "name": "Database & Entity", "report": "A1_entities.md", "status": "VERIFIED" },
+    { "id": 4, "name": "Test Discovery", "report": "A1_tests.md", "status": "VERIFIED (counts); execution UNVERIFIED" },
+    { "id": 5, "name": "Architecture & Dependency", "report": "A1_architecture.md", "status": "VERIFIED" },
+    { "id": 6, "name": "Flow Trace", "report": "A1_flow_trace.md", "status": "VERIFIED" },
+    { "id": 7, "name": "Security (optional)", "report": "A1_security.md", "status": "INFERRED/UNVERIFIED (from reports)" },
+    { "id": 8, "name": "Performance (optional)", "report": "A1_performance.md", "status": "INFERRED/UNVERIFIED (from reports)" }
+  ],
+  "verification": {
+    "specialist_reports": 6,
+    "coordinator_spot_checks": 5,
+    "independent_agent_reverifications": 7,
+    "adversarial_outcome": { "confirmed": 6, "partial": 1, "refuted": 0 }
+  },
+  "artifacts": {
+    "validator": "scripts/validate_a1_reports.sh",
+    "runner": "run_a1_analysis.sh",
+    "repro_dir": "artifacts/repro/",
+    "api_inventory": "docs/agent-analysis/A1_api_inventory.yaml",
+    "provenance": "docs/agent-analysis/A1_provenance.yaml"
+  }
+}

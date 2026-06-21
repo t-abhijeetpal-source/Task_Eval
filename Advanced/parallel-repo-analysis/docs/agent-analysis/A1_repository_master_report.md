@@ -1,7 +1,7 @@
 # A1 — Repository Master Report (Consolidated)
 
 > Consolidated from 6 independent specialist agents + cross-verification. Target:
-> `/Users/abhijeetpal/Desktop/workspace/android-monorepo` (Paytm Money codebase — Kotlin equity SDK
+> `$TARGET_REPO (android-monorepo)` (Paytm Money codebase — Kotlin equity SDK
 > + Room + Flutter app), equity vertical. Date: 2026-06-17.
 > Status legend: **VERIFIED** (read/grepped) · **INFERRED** (naming/convention) · **UNVERIFIED** (not confirmed).
 > Source reports: `A1_inventory.md`, `A1_api_map.md`, `A1_entities.md`, `A1_tests.md`,
@@ -19,6 +19,10 @@
 | Entities found | **27 tables** in 2 Room DBs (24 EquityDatabase v19 + 3 LoggingDataBase v7) | VERIFIED + independently re-verified |
 | Tests discovered | **520** `*Test.kt` (equity vertical) + **212** `*_test.dart` (pml-flutter); 1,684 `*Test.kt` repo-wide | VERIFIED (counts); execution UNVERIFIED (SDK blocker) |
 | Contradictions resolved | 2 (Retrofit 71→78 corrected; module-count reconciled) + 1 risk reworded post independent verification | Coordinator + independent agent |
+| Lanes run | **6 core** (inventory, api_map, entities, tests, architecture, flow_trace) + **2 optional** (security `A1_security.md`, performance `A1_performance.md`) + dependency inventory (`A1_dependencies.md`) | VERIFIED (core); optional lanes INFERRED-from-reports |
+
+> Machine-readable copy of these metrics: `A1_manifest.json`. Provenance: `A1_provenance.yaml`.
+> Structured API inventory: `A1_api_inventory.yaml`. Evidence: `../../artifacts/repro/`.
 
 ---
 
@@ -271,3 +275,25 @@ sequenceDiagram
 - [x] Contradictions resolved (2)
 - [x] Evidence attached (file paths / schema JSONs throughout)
 - [x] Verification status assigned (VERIFIED / INFERRED / UNVERIFIED)
+
+---
+
+## Remediation Backlog
+
+Findings that warrant follow-up work in the **analyzed repo** (not this deliverable). Full
+register + status: `docs/A1_engineering_evaluation_audit.md` and `docs/A1_remediation_tracker.md`.
+Each item ships a ready-to-execute prompt under `prompts/remediation/`.
+
+| ID | Sev | From risk | Action | Prompt |
+|---|---|---|---|---|
+| RT-EXT-023 | HIGH | Risk #1 (CI gap) | Add equity_sdk + Flutter unit-test stages to CI | PROMPT-023 |
+| RT-EXT-024 | MED | Risk #2 (weak gates) | Align flavor so jacoco is valid; make coverage gates blocking | PROMPT-024 |
+| RT-EXT-025 | MED | Risk #3 (layer violations) | Refactor `orders`/`indices` to go through repos/use-cases | PROMPT-025 |
+| RT-EXT-026 | MED | Risk #3 | Add Konsist/lint rule banning presentation→data imports | PROMPT-026 |
+| RT-EXT-027 | LOW | Risk #4 (no FKs) | Publish the 27-table no-FK Room data-model doc | PROMPT-027 |
+| RT-EXT-028 | LOW | Risk #5 (doc drift) | Refresh stale coverage (78.6%) + wrong `pml-flutter` path | PROMPT-028 |
+| RT-EXT-031 | — | Lane 7 (security) | Remediate security findings (`A1_security.md`) | PROMPT-031 |
+| RT-EXT-032 | — | Lane 8 (performance) | Remediate performance findings (`A1_performance.md`) | PROMPT-032 |
+
+> Extended lanes: see `A1_security.md` (Lane 7), `A1_performance.md` (Lane 8), and
+> `A1_dependencies.md` (dependency/version inventory).

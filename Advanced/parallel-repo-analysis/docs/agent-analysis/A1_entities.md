@@ -204,3 +204,16 @@ Three views must agree: entity `@Entity` classes found, entities registered in `
 - **Composite PKs: 0.**
 - **Indices: 1** (unique composite index on `kyc_status_data`).
 - Entity-class / `@Database`-registration / schema-table counts reconcile perfectly in both DBs.
+
+---
+
+## Agent vs Verified (cross-verification footer)
+
+> Added in remediation (AUDIT-026). This lane was produced by **Agent 3 (Entities)** working independently
+> (no cross-reading). The coordinator's checks live in `A1_verification_report.md`; the
+> consolidated reconciliation is in `A1_repository_master_report.md` § *Agent Findings vs Verified Findings*.
+
+| As reported by Agent 3 (Entities) | Coordinator-verified | Status |
+|---|---|---|
+| 2 Room DBs, 27 tables (24 + 3), 0 `@ForeignKey`, reconciles exactly | exported schema JSONs v19/v7; `grep @ForeignKey` → **0** | VERIFIED |
+| INFERRED shared-key links (isin/stock_id) | not DB-enforced | INFERRED |

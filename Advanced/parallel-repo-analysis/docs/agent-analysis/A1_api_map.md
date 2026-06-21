@@ -1,6 +1,6 @@
 # A1 — Outbound API Surface Map (Agent 2)
 
-**Target:** `/Users/abhijeetpal/Desktop/workspace/android-monorepo` (Android Kotlin + Flutter client app)
+**Target:** `$TARGET_REPO (android-monorepo)` (Android Kotlin + Flutter client app)
 **Scope:** `equity_sdk/`, `base_app/`, `flutter/pml-flutter/`
 **Date:** 2026-06-17
 
@@ -170,3 +170,34 @@ flowchart LR
 - **`CoreNetworkInterceptor` / `CoreNetworkModule` / `ExternalNetworkInterceptor`** live in `library/` and `subspayments/` (outside the 3 scoped dirs) but are the actual auth/transport for in-scope services — cited because they bind the in-scope Retrofit services. (VERIFIED, cross-module)
 - **Flutter `HttpApiClient` token injection**: exact auth-header source **NOT FOUND IN REPOSITORY** within scoped files. (INFERRED caller-supplied)
 - No server-side endpoint definitions exist anywhere — confirmed client-only. (VERIFIED)
+
+---
+
+## Agent vs Verified (cross-verification footer)
+
+> Added in remediation (AUDIT-026). This lane was produced by **Agent 2 (API Map)** working independently
+> (no cross-reading). The coordinator's checks live in `A1_verification_report.md`; the
+> consolidated reconciliation is in `A1_repository_master_report.md` § *Agent Findings vs Verified Findings*.
+
+| As reported by Agent 2 (API Map) | Coordinator-verified | Status |
+|---|---|---|
+| 78 equity_sdk Retrofit interfaces (+1 base_app), ~363 methods, `@Url`-dynamic | grep `@GET/@POST/@PUT/@DELETE` over `equity_sdk/src` → **78** | VERIFIED |
+| ~363 endpoint methods | annotation-derived incl. dynamic `@Url` | INFERRED (count) |
+
+---
+
+## Appendix — Long-tail & severity (depth-cap overflow)
+
+> Long-tail of the outbound surface, counted rather than enumerated (AUDIT-027).
+
+| Group | Shown | Tail (counted) | Where |
+|---|---|---|---|
+| Retrofit interfaces | representative services | **78** total in equity_sdk (+1 base_app) | `equity_sdk/src/main` |
+| Endpoint methods | sampled | ~**363** (INFERRED; incl. dynamic `@Url`) | per service file |
+| `@Url` dynamic params | pattern shown | **374** occurrences | equity_sdk |
+| Flutter outbound calls | pattern shown | ~**173** `executeWithParser` + **2** direct `http` | `pml-flutter/lib` |
+
+**Severity ranking of API surface risks (feeds `A1_security.md`):**
+1. **HIGH** — `@Url`-dynamic host/path assembly without a verified allow-list (SEC-3).
+2. **MED** — 2 Flutter `package:http` calls bypassing the authenticated bridge (SEC-4).
+3. **LOW** — exact method count is INFERRED; reproduce with `scripts/generate_api_inventory.sh`.

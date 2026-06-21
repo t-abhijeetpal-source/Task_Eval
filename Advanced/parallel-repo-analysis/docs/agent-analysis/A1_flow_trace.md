@@ -1,6 +1,6 @@
 # A1 Flow Trace — "Search-event persistence" (Recent Search write + PUT event API)
 
-Agent 6 (Flow Trace Agent). Read-only analysis of `/Users/abhijeetpal/Desktop/workspace/android-monorepo`.
+Agent 6 (Flow Trace Agent). Read-only analysis of `$TARGET_REPO (android-monorepo)`.
 
 Flow traced: **User taps/bookmarks a stock from the search screen → an event is recorded both as a remote `PUT` API call AND as a Room DB write into the `recent_search` table.** This flow has TWO real side effects fired in parallel from one repository method (`Completable.mergeArrayDelayError`).
 
@@ -154,3 +154,16 @@ sequenceDiagram
 - **Which Dagger component installs `CommonScripEventModule`:** the `@Provides` bindings are confirmed, but the component graph that wires `EquitySearchViewModel` ⇄ `SearchedUserEvent` ⇄ `ScripEventRepositoryImp` ⇄ `RecentSearchDao` (via `EquityBaseComponent.exposeRecentSearchDao`) was not fully walked. The exposure point (`EquityBaseComponent.kt:149`) and module bindings are VERIFIED; the full component wiring is **INFERRED via convention**.
 - **`compositeDisposable` lifecycle:** `EquitySearchViewModel.putSearchedEvent` no-ops if `compositeDisposable` is null (`EquitySearchViewModel.kt:698`). Where/when it is initialized was not traced — **UNVERIFIED** (does not affect the side-effect chain when present).
 - **Error handling:** `onErrorComplete()` (`SearchedUserEventImpl.kt:22`) plus `mergeArrayDelayError` means a failure in either branch is swallowed and does not surface to the UI; the DB write can still succeed even if the API PUT fails (and vice versa). — VERIFIED behavior.
+
+---
+
+## Agent vs Verified (cross-verification footer)
+
+> Added in remediation (AUDIT-026). This lane was produced by **Agent 6 (Flow Trace)** working independently
+> (no cross-reading). The coordinator's checks live in `A1_verification_report.md`; the
+> consolidated reconciliation is in `A1_repository_master_report.md` § *Agent Findings vs Verified Findings*.
+
+| As reported by Agent 6 (Flow Trace) | Coordinator-verified | Status |
+|---|---|---|
+| 8-hop recent-search flow → Retrofit PUT + Room write in parallel | `ScripEventRepositoryImp.kt:63,65` (search) + `:33,35` (viewed) | VERIFIED (richer: 2 methods) |
+| Retrofit base-URL provider + exact Dagger component | not fully walked | INFERRED |

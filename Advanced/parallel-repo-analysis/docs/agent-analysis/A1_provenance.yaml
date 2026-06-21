@@ -1,0 +1,30 @@
+# A1 parallel-repo-analysis — provenance of this deliverable.
+# Records WHERE/WHEN the analysis + remediation were produced, for traceability.
+
+deliverable:
+  task: A1 — Parallel Repository Analysis
+  monorepo_branch: main
+  monorepo_commit: 973b512aa2a76081f2dc1e1d05c1a5711ee88c25
+  monorepo_commit_short: 973b512
+  produced_date: "2026-06-21"
+  analysis_date: "2026-06-17"
+
+target_repo:
+  name: android-monorepo
+  description: Paytm Money mobile super-app monorepo (Kotlin equity SDK + Room + Flutter client)
+  # Path is intentionally not committed; supplied at runtime via TARGET_REPO (.env).
+  path_env: TARGET_REPO
+  commit: unknown            # set when captured against a live checkout (git -C $TARGET_REPO rev-parse HEAD)
+  scope: equity vertical (common-database/, equity_sdk/, base_app/, flutter/pml-flutter/)
+
+method:
+  lanes: 6 core (inventory, api_map, entities, tests, architecture, flow_trace)
+  optional_lanes: 2 (security, performance) + dependency inventory
+  phases: [plan, fan-out, cross-verify, consolidate]
+  independence: each specialist agent works alone; no cross-reading of reports
+  verification: coordinator spot-checks + blind adversarial Phase-3b agent
+
+evidence:
+  repro_dir: artifacts/repro/
+  manifest: docs/agent-analysis/A1_manifest.json
+  validator: scripts/validate_a1_reports.sh
